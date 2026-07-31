@@ -43,19 +43,19 @@ const (
 )
 
 type DesktopAuthSession struct {
-	ID            string                  `json:"id"`
-	ClientID      string                  `json:"client_id"`
-	CodeChallenge string                  `json:"code_challenge"`
-	DeviceName    string                  `json:"device_name"`
-	State         DesktopAuthSessionState `json:"state"`
-	UserID        int64                   `json:"user_id,omitempty"`
-	APIKeyID      int64                   `json:"api_key_id,omitempty"`
-	AccessToken   string                  `json:"access_token,omitempty"`
-	BaseURL       string                  `json:"base_url,omitempty"`
-	DefaultModel  string                  `json:"default_model,omitempty"`
-	ProviderName  string                  `json:"provider_name,omitempty"`
-	SubscriptionExpiresAt *time.Time               `json:"subscription_expires_at,omitempty"`
-	ExpiresAt     time.Time               `json:"expires_at"`
+	ID                    string                  `json:"id"`
+	ClientID              string                  `json:"client_id"`
+	CodeChallenge         string                  `json:"code_challenge"`
+	DeviceName            string                  `json:"device_name"`
+	State                 DesktopAuthSessionState `json:"state"`
+	UserID                int64                   `json:"user_id,omitempty"`
+	APIKeyID              int64                   `json:"api_key_id,omitempty"`
+	AccessToken           string                  `json:"access_token,omitempty"`
+	BaseURL               string                  `json:"base_url,omitempty"`
+	DefaultModel          string                  `json:"default_model,omitempty"`
+	ProviderName          string                  `json:"provider_name,omitempty"`
+	SubscriptionExpiresAt *time.Time              `json:"subscription_expires_at,omitempty"`
+	ExpiresAt             time.Time               `json:"expires_at"`
 }
 
 type DesktopAuthSessionResponse struct {
