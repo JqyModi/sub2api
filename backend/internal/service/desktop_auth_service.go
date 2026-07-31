@@ -72,9 +72,9 @@ type DesktopAuthStatusResponse struct {
 }
 
 type DesktopAuthService struct {
-	store               DesktopAuthStore
-	apiKeyIssuer        DesktopAuthKeyIssuer
-	subscriptionReader  DesktopAuthSubscriptionReader
+	store              DesktopAuthStore
+	apiKeyIssuer       DesktopAuthKeyIssuer
+	subscriptionReader DesktopAuthSubscriptionReader
 }
 
 type DesktopAuthStore interface {
@@ -93,9 +93,9 @@ type DesktopAuthSubscriptionReader interface {
 
 func NewDesktopAuthService(store DesktopAuthStore, apiKeyIssuer DesktopAuthKeyIssuer, subscriptionReader DesktopAuthSubscriptionReader) *DesktopAuthService {
 	return &DesktopAuthService{
-		store:               store,
-		apiKeyIssuer:        apiKeyIssuer,
-		subscriptionReader:  subscriptionReader,
+		store:              store,
+		apiKeyIssuer:       apiKeyIssuer,
+		subscriptionReader: subscriptionReader,
 	}
 }
 
