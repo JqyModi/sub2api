@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -52,6 +53,10 @@ func (h *DesktopAuthHandler) PollToken(c *gin.Context) {
 	}
 	session, status, err := h.service.PollToken(c.Request.Context(), req.SessionID, req.CodeVerifier)
 	if err != nil {
+		if errors.Is(err, service.ErrDesktopAuthSessionNotFound) || errors.Is(err, service.ErrDesktopAuthSessionExpired) {
+			response.Error(c, http.StatusGone, "Desktop authorization session expired")
+			return
+		}
 		response.ErrorFrom(c, err)
 		return
 	}

@@ -38,7 +38,7 @@ jobs:
           mkdir -p data postgres_data redis_data
       - name: Build fork image and start dependencies
         run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -d --build
-      - name: Verify health and desktop authorization route
+      - name: Verify complete desktop authorization flow
         run: |
           for attempt in $(seq 1 30); do
             if curl --fail --silent --show-error http://127.0.0.1:8080/health >/dev/null; then
@@ -48,12 +48,56 @@ jobs:
             sleep 2
           done
 
-          challenge=$(printf 'a%.0s' {1..43})
-          response=$(curl --fail --silent --show-error \
+          api() {
+            curl --fail --silent --show-error --header 'Content-Type: application/json' "$@"
+          }
+
+          admin_login=$(api --data '{"email":"admin@sub2api.local","password":"desktop-auth-smoke-admin"}' http://127.0.0.1:8080/api/v1/auth/login)
+          admin_token=$(jq --raw-output '.data.access_token' <<<"$admin_login")
+          test "$admin_token" != null
+
+          group=$(api --header "Authorization: Bearer $admin_token" \
+            --data '{"name":"Desktop Auth Smoke","platform":"openai","subscription_type":"subscription"}' \
+            http://127.0.0.1:8080/api/v1/admin/groups)
+          group_id=$(jq --raw-output '.data.id' <<<"$group")
+          test "$group_id" != null
+
+          test_user=$(api --header "Authorization: Bearer $admin_token" \
+            --data '{"email":"desktop-auth-smoke@example.test","password":"desktop-auth-smoke-user","role":"user"}' \
+            http://127.0.0.1:8080/api/v1/admin/users)
+          user_id=$(jq --raw-output '.data.id' <<<"$test_user")
+          test "$user_id" != null
+
+          api --header "Authorization: Bearer $admin_token" \
+            --data "{\"user_id\":$user_id,\"group_id\":$group_id,\"validity_days\":30}" \
+            http://127.0.0.1:8080/api/v1/admin/subscriptions/assign >/dev/null
+
+          user_login=$(api --data '{"email":"desktop-auth-smoke@example.test","password":"desktop-auth-smoke-user"}' http://127.0.0.1:8080/api/v1/auth/login)
+          user_token=$(jq --raw-output '.data.access_token' <<<"$user_login")
+          test "$user_token" != null
+
+          verifier=$(printf 'v%.0s' {1..43})
+          challenge=$(printf %s "$verifier" | openssl dgst -sha256 -binary | base64 | tr '+/' '-_' | tr -d '=')
+          session=$(api \
             --header 'Content-Type: application/json' \
             --data "{\"client_id\":\"codex-multi-launcher\",\"device_name\":\"CI\",\"code_challenge\":\"${challenge}\"}" \
             http://127.0.0.1:8080/api/v1/desktop-auth/sessions)
-          jq --exit-status '.data.session_id and .data.authorization_url' <<<"$response" >/dev/null
+          session_id=$(jq --raw-output '.data.session_id' <<<"$session")
+          test "$session_id" != null
+
+          api --header "Authorization: Bearer $user_token" \
+            --data '{}' \
+            http://127.0.0.1:8080/api/v1/desktop-auth/sessions/"$session_id"/approve >/dev/null
+
+          token=$(api --data "{\"session_id\":\"$session_id\",\"code_verifier\":\"$verifier\"}" \
+            http://127.0.0.1:8080/api/v1/desktop-auth/token)
+          jq --exit-status '.data.access_token and .data.base_url and .data.default_model and .data.expires_at' <<<"$token" >/dev/null
+
+          repeat_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data "{\"session_id\":\"$session_id\",\"code_verifier\":\"$verifier\"}" \
+            http://127.0.0.1:8080/api/v1/desktop-auth/token)
+          test "$repeat_status" = 410
       - name: Print service logs on failure
         if: failure()
         run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml logs --no-color sub2api postgres redis

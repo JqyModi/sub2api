@@ -65,7 +65,7 @@ func TestDesktopAuthHTTPFlow(t *testing.T) {
 	require.NotEmpty(t, exchanged.Data.ExpiresAt)
 
 	reused := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/token", `{"session_id":"`+created.Data.SessionID+`","code_verifier":"`+verifier+`"}`)
-	require.NotEqual(t, http.StatusOK, reused.Code)
+	require.Equal(t, http.StatusGone, reused.Code)
 }
 
 func requestDesktopAuth(t *testing.T, router http.Handler, method, target, body string) *httptest.ResponseRecorder {
