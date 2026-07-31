@@ -25,7 +25,7 @@ type startDesktopAuthRequest struct {
 }
 
 type pollDesktopAuthRequest struct {
-	SessionID   string `json:"session_id" binding:"required"`
+	SessionID    string `json:"session_id" binding:"required"`
 	CodeVerifier string `json:"code_verifier" binding:"required"`
 }
 

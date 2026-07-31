@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	desktopAuthClientID       = "codex-multi-launcher"
-	desktopAuthSessionTTL     = 5 * time.Minute
-	desktopAuthPollInterval   = 2
-	desktopAuthSessionPrefix  = "desktop-auth:session:"
-	desktopAuthDefaultModel   = "gpt-5-codex"
-	desktopAuthKeyNamePrefix  = "Codex Multi Launcher"
+	desktopAuthClientID      = "codex-multi-launcher"
+	desktopAuthSessionTTL    = 5 * time.Minute
+	desktopAuthPollInterval  = 2
+	desktopAuthSessionPrefix = "desktop-auth:session:"
+	desktopAuthDefaultModel  = "gpt-5-codex"
+	desktopAuthKeyNamePrefix = "Codex Multi Launcher"
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 	ErrDesktopAuthSessionExpired  = errors.New("desktop authorization session expired")
 	ErrDesktopAuthInvalidClient   = errors.New("desktop authorization client is invalid")
 	ErrDesktopAuthInvalidVerifier = errors.New("desktop authorization verifier is invalid")
-	ErrDesktopAuthNotAuthorized    = errors.New("desktop authorization is not complete")
+	ErrDesktopAuthNotAuthorized   = errors.New("desktop authorization is not complete")
 )
 
 type DesktopAuthSessionState string
@@ -44,18 +44,18 @@ const (
 )
 
 type DesktopAuthSession struct {
-	ID            string                   `json:"id"`
-	ClientID      string                   `json:"client_id"`
-	CodeChallenge string                   `json:"code_challenge"`
-	DeviceName    string                   `json:"device_name"`
-	State         DesktopAuthSessionState  `json:"state"`
-	UserID        int64                    `json:"user_id,omitempty"`
-	APIKeyID      int64                    `json:"api_key_id,omitempty"`
-	AccessToken   string                   `json:"access_token,omitempty"`
-	BaseURL       string                   `json:"base_url,omitempty"`
-	DefaultModel  string                   `json:"default_model,omitempty"`
-	ProviderName  string                   `json:"provider_name,omitempty"`
-	ExpiresAt     time.Time                `json:"expires_at"`
+	ID            string                  `json:"id"`
+	ClientID      string                  `json:"client_id"`
+	CodeChallenge string                  `json:"code_challenge"`
+	DeviceName    string                  `json:"device_name"`
+	State         DesktopAuthSessionState `json:"state"`
+	UserID        int64                   `json:"user_id,omitempty"`
+	APIKeyID      int64                   `json:"api_key_id,omitempty"`
+	AccessToken   string                  `json:"access_token,omitempty"`
+	BaseURL       string                  `json:"base_url,omitempty"`
+	DefaultModel  string                  `json:"default_model,omitempty"`
+	ProviderName  string                  `json:"provider_name,omitempty"`
+	ExpiresAt     time.Time               `json:"expires_at"`
 }
 
 type DesktopAuthSessionResponse struct {
@@ -66,15 +66,15 @@ type DesktopAuthSessionResponse struct {
 }
 
 type DesktopAuthStatusResponse struct {
-	State                DesktopAuthSessionState `json:"state"`
-	ProviderName         string                  `json:"provider_name,omitempty"`
-	DefaultModel         string                  `json:"default_model,omitempty"`
-	SubscriptionExpiresAt *time.Time             `json:"subscription_expires_at,omitempty"`
+	State                 DesktopAuthSessionState `json:"state"`
+	ProviderName          string                  `json:"provider_name,omitempty"`
+	DefaultModel          string                  `json:"default_model,omitempty"`
+	SubscriptionExpiresAt *time.Time              `json:"subscription_expires_at,omitempty"`
 }
 
 type DesktopAuthService struct {
-	redis              *redis.Client
-	apiKeyService      *APIKeyService
+	redis               *redis.Client
+	apiKeyService       *APIKeyService
 	subscriptionService *SubscriptionService
 }
 
