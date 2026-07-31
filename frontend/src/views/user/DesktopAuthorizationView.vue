@@ -62,7 +62,7 @@ const sessionId = computed(() => String(route.query.session || '').trim())
 const state = ref<AuthorizationState>('pending')
 const isLoading = ref(false)
 const errorMessage = ref('')
-let paymentPollTimer: ReturnType<typeof window.setInterval> | null = null
+let paymentPollTimer: number | null = null
 
 const copy = computed(() => locale.value.startsWith('zh') ? {
   title: '连接桌面订阅服务', subtitle: '为 Codex 多开助手授权当前账号的有效订阅。', loading: '正在检查授权状态...', confirmDetail: '确认后会为当前设备创建独立接入配置，不会在页面显示 API Key。', confirm: '确认接入', paymentRequired: '当前账号还没有有效订阅。', paymentDetail: '套餐会在新标签页打开。支付完成后，此页面会自动继续接入。', purchase: '查看套餐', retry: '重新检查', success: '接入成功', successDetail: '可以返回 Codex 多开助手继续创建 Profile。', close: '返回首页', cancel: '取消'
@@ -110,7 +110,7 @@ onMounted(() => {
 })
 
 watch(state, (nextState) => {
-  if (paymentPollTimer) {
+  if (paymentPollTimer !== null) {
     window.clearInterval(paymentPollTimer)
     paymentPollTimer = null
   }
@@ -120,7 +120,7 @@ watch(state, (nextState) => {
 })
 
 onBeforeUnmount(() => {
-  if (paymentPollTimer) {
+  if (paymentPollTimer !== null) {
     window.clearInterval(paymentPollTimer)
   }
 })

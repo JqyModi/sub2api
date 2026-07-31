@@ -54,7 +54,7 @@ type DesktopAuthSession struct {
 	BaseURL       string                  `json:"base_url,omitempty"`
 	DefaultModel  string                  `json:"default_model,omitempty"`
 	ProviderName  string                  `json:"provider_name,omitempty"`
-	SubscriptionExpiresAt *time.Time      `json:"subscription_expires_at,omitempty"`
+	SubscriptionExpiresAt *time.Time               `json:"subscription_expires_at,omitempty"`
 	ExpiresAt     time.Time               `json:"expires_at"`
 }
 
