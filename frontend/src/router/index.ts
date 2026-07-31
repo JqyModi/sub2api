@@ -301,6 +301,16 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/desktop/authorize',
+    name: 'DesktopAuthorization',
+    component: () => import('@/views/user/DesktopAuthorizationView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Desktop Authorization'
+    }
+  },
+  {
     path: '/purchase',
     name: 'PurchaseSubscription',
     component: () => import('@/views/user/PaymentView.vue'),
