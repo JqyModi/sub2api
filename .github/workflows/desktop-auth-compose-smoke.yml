@@ -57,6 +57,10 @@ jobs:
           admin_token=$(jq --raw-output '.data.access_token' <<<"$admin_login")
           test "$admin_token" != null
 
+          api --header "Authorization: Bearer $admin_token" \
+            --data '{"language":"en","phrase":"I have read, understood, and agree to the Sub2API Deployment and Operation Compliance Commitment"}' \
+            http://127.0.0.1:8080/api/v1/admin/compliance/accept >/dev/null
+
           group=$(api --header "Authorization: Bearer $admin_token" \
             --data '{"name":"Desktop Auth Smoke","platform":"openai","subscription_type":"subscription"}' \
             http://127.0.0.1:8080/api/v1/admin/groups)
