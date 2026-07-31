@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '@/api'
 import { useI18n } from 'vue-i18n'
@@ -62,14 +62,16 @@ const sessionId = computed(() => String(route.query.session || '').trim())
 const state = ref<AuthorizationState>('pending')
 const isLoading = ref(false)
 const errorMessage = ref('')
+let paymentPollTimer: ReturnType<typeof window.setInterval> | null = null
 
 const copy = computed(() => locale.value.startsWith('zh') ? {
-  title: '连接桌面订阅服务', subtitle: '为 Codex 多开助手授权当前账号的有效订阅。', loading: '正在检查授权状态...', confirmDetail: '确认后会为当前设备创建独立接入配置，不会在页面显示 API Key。', confirm: '确认接入', paymentRequired: '当前账号还没有有效订阅。', paymentDetail: '购买套餐并完成支付后，回到这里重新点击确认接入。', purchase: '查看套餐', retry: '重新检查', success: '接入成功', successDetail: '可以返回 Codex 多开助手继续创建 Profile。', close: '返回首页', cancel: '取消'
+  title: '连接桌面订阅服务', subtitle: '为 Codex 多开助手授权当前账号的有效订阅。', loading: '正在检查授权状态...', confirmDetail: '确认后会为当前设备创建独立接入配置，不会在页面显示 API Key。', confirm: '确认接入', paymentRequired: '当前账号还没有有效订阅。', paymentDetail: '套餐会在新标签页打开。支付完成后，此页面会自动继续接入。', purchase: '查看套餐', retry: '重新检查', success: '接入成功', successDetail: '可以返回 Codex 多开助手继续创建 Profile。', close: '返回首页', cancel: '取消'
 } : {
-  title: 'Connect desktop subscription', subtitle: 'Authorize the active subscription for Codex Multi Launcher.', loading: 'Checking authorization...', confirmDetail: 'A device-specific connection will be created. The API key will not be shown in this page.', confirm: 'Authorize', paymentRequired: 'No active subscription was found.', paymentDetail: 'Purchase a plan, complete payment, then return here and retry.', purchase: 'View plans', retry: 'Check again', success: 'Connected', successDetail: 'Return to Codex Multi Launcher to create a profile.', close: 'Return home', cancel: 'Cancel'
+  title: 'Connect desktop subscription', subtitle: 'Authorize the active subscription for Codex Multi Launcher.', loading: 'Checking authorization...', confirmDetail: 'A device-specific connection will be created. The API key will not be shown in this page.', confirm: 'Authorize', paymentRequired: 'No active subscription was found.', paymentDetail: 'Plans open in a new tab. This page continues automatically after payment succeeds.', purchase: 'View plans', retry: 'Check again', success: 'Connected', successDetail: 'Return to Codex Multi Launcher to create a profile.', close: 'Return home', cancel: 'Cancel'
 })
 
 async function approve(): Promise<void> {
+  if (isLoading.value) return
   if (!sessionId.value) {
     errorMessage.value = copy.value.confirmDetail
     return
@@ -93,7 +95,7 @@ async function approve(): Promise<void> {
 }
 
 function goPurchase(): void {
-  void router.push('/purchase')
+  window.open(router.resolve('/purchase').href, '_blank', 'noopener,noreferrer')
 }
 
 function closePage(): void {
@@ -104,6 +106,22 @@ onMounted(() => {
   if (!sessionId.value) {
     state.value = 'error'
     errorMessage.value = 'Missing authorization session.'
+  }
+})
+
+watch(state, (nextState) => {
+  if (paymentPollTimer) {
+    window.clearInterval(paymentPollTimer)
+    paymentPollTimer = null
+  }
+  if (nextState === 'payment_required') {
+    paymentPollTimer = window.setInterval(() => void approve(), 5000)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (paymentPollTimer) {
+    window.clearInterval(paymentPollTimer)
   }
 })
 </script>
