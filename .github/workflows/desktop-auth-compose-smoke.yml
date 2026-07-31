@@ -40,6 +40,7 @@ jobs:
         run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -d --build
       - name: Verify complete desktop authorization flow
         run: |
+          trap 'echo "Desktop authorization smoke failed at script line $LINENO" >&2' ERR
           for attempt in $(seq 1 30); do
             if curl --fail --silent --show-error http://127.0.0.1:8080/health >/dev/null; then
               break
