@@ -85,9 +85,18 @@ jobs:
           session_id=$(jq --raw-output '.data.session_id' <<<"$session")
           test "$session_id" != null
 
-          api --header "Authorization: Bearer $user_token" \
+          approve_response=$(curl --silent --show-error --write-out '\n%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --header "Authorization: Bearer $user_token" \
             --data '{}' \
-            http://127.0.0.1:8080/api/v1/desktop-auth/sessions/"$session_id"/approve >/dev/null
+            http://127.0.0.1:8080/api/v1/desktop-auth/sessions/"$session_id"/approve)
+          approve_status=$(tail --lines=1 <<<"$approve_response")
+          approve_body=$(head --lines=-1 <<<"$approve_response")
+          if test "$approve_status" != 200; then
+            echo "Desktop authorization approval failed with HTTP $approve_status" >&2
+            jq . <<<"$approve_body" >&2 || true
+            exit 1
+          fi
 
           token=$(api --data "{\"session_id\":\"$session_id\",\"code_verifier\":\"$verifier\"}" \
             http://127.0.0.1:8080/api/v1/desktop-auth/token)
