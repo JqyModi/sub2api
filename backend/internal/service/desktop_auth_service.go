@@ -1,0 +1,281 @@
+package service
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+)
+
+const (
+	desktopAuthClientID       = "codex-multi-launcher"
+	desktopAuthSessionTTL     = 5 * time.Minute
+	desktopAuthPollInterval   = 2
+	desktopAuthSessionPrefix  = "desktop-auth:session:"
+	desktopAuthDefaultModel   = "gpt-5-codex"
+	desktopAuthKeyNamePrefix  = "Codex Multi Launcher"
+)
+
+var (
+	ErrDesktopAuthSessionNotFound = errors.New("desktop authorization session not found")
+	ErrDesktopAuthSessionExpired  = errors.New("desktop authorization session expired")
+	ErrDesktopAuthInvalidClient   = errors.New("desktop authorization client is invalid")
+	ErrDesktopAuthInvalidVerifier = errors.New("desktop authorization verifier is invalid")
+	ErrDesktopAuthNotAuthorized    = errors.New("desktop authorization is not complete")
+)
+
+type DesktopAuthSessionState string
+
+const (
+	DesktopAuthPending         DesktopAuthSessionState = "pending"
+	DesktopAuthPaymentRequired DesktopAuthSessionState = "payment_required"
+	DesktopAuthAuthorized      DesktopAuthSessionState = "authorized"
+	DesktopAuthDenied          DesktopAuthSessionState = "denied"
+	DesktopAuthExpired         DesktopAuthSessionState = "expired"
+)
+
+type DesktopAuthSession struct {
+	ID            string                   `json:"id"`
+	ClientID      string                   `json:"client_id"`
+	CodeChallenge string                   `json:"code_challenge"`
+	DeviceName    string                   `json:"device_name"`
+	State         DesktopAuthSessionState  `json:"state"`
+	UserID        int64                    `json:"user_id,omitempty"`
+	APIKeyID      int64                    `json:"api_key_id,omitempty"`
+	AccessToken   string                   `json:"access_token,omitempty"`
+	BaseURL       string                   `json:"base_url,omitempty"`
+	DefaultModel  string                   `json:"default_model,omitempty"`
+	ProviderName  string                   `json:"provider_name,omitempty"`
+	ExpiresAt     time.Time                `json:"expires_at"`
+}
+
+type DesktopAuthSessionResponse struct {
+	SessionID        string `json:"session_id"`
+	AuthorizationURL string `json:"authorization_url"`
+	ExpiresIn        int    `json:"expires_in"`
+	PollInterval     int    `json:"poll_interval"`
+}
+
+type DesktopAuthStatusResponse struct {
+	State                DesktopAuthSessionState `json:"state"`
+	ProviderName         string                  `json:"provider_name,omitempty"`
+	DefaultModel         string                  `json:"default_model,omitempty"`
+	SubscriptionExpiresAt *time.Time             `json:"subscription_expires_at,omitempty"`
+}
+
+type DesktopAuthService struct {
+	redis              *redis.Client
+	apiKeyService      *APIKeyService
+	subscriptionService *SubscriptionService
+}
+
+func NewDesktopAuthService(redisClient *redis.Client, apiKeyService *APIKeyService, subscriptionService *SubscriptionService) *DesktopAuthService {
+	return &DesktopAuthService{
+		redis:               redisClient,
+		apiKeyService:       apiKeyService,
+		subscriptionService: subscriptionService,
+	}
+}
+
+func (s *DesktopAuthService) CreateSession(ctx context.Context, clientID, codeChallenge, deviceName, authorizationURL string) (*DesktopAuthSessionResponse, error) {
+	if clientID != desktopAuthClientID {
+		return nil, ErrDesktopAuthInvalidClient
+	}
+	if !isValidCodeChallenge(codeChallenge) {
+		return nil, ErrDesktopAuthInvalidVerifier
+	}
+	if s.redis == nil {
+		return nil, errors.New("desktop authorization storage is unavailable")
+	}
+
+	id, err := randomDesktopAuthID()
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	session := DesktopAuthSession{
+		ID:            id,
+		ClientID:      clientID,
+		CodeChallenge: codeChallenge,
+		DeviceName:    normalizeDesktopDeviceName(deviceName),
+		State:         DesktopAuthPending,
+		ExpiresAt:     now.Add(desktopAuthSessionTTL),
+	}
+	if err := s.save(ctx, session); err != nil {
+		return nil, err
+	}
+
+	return &DesktopAuthSessionResponse{
+		SessionID:        id,
+		AuthorizationURL: authorizationURL + "?session=" + id,
+		ExpiresIn:        int(desktopAuthSessionTTL / time.Second),
+		PollInterval:     desktopAuthPollInterval,
+	}, nil
+}
+
+func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID string, userID int64, baseURL string) (*DesktopAuthStatusResponse, error) {
+	session, err := s.load(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if session.ExpiresAt.Before(time.Now()) {
+		return nil, ErrDesktopAuthSessionExpired
+	}
+	if session.UserID != 0 && session.UserID != userID {
+		return nil, ErrDesktopAuthSessionNotFound
+	}
+	if session.State == DesktopAuthAuthorized {
+		return statusFromDesktopSession(session), nil
+	}
+	if s.subscriptionService == nil || s.apiKeyService == nil {
+		return nil, errors.New("desktop authorization dependencies are unavailable")
+	}
+
+	subscriptions, err := s.subscriptionService.ListActiveUserSubscriptions(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list active subscriptions: %w", err)
+	}
+	session.UserID = userID
+	if len(subscriptions) == 0 {
+		session.State = DesktopAuthPaymentRequired
+		if err := s.save(ctx, session); err != nil {
+			return nil, err
+		}
+		return statusFromDesktopSession(session), nil
+	}
+
+	subscription := subscriptions[0]
+	groupID := subscription.GroupID
+	key, err := s.apiKeyService.Create(ctx, userID, CreateAPIKeyRequest{
+		Name:    desktopAuthKeyName(session.DeviceName),
+		GroupID: &groupID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create desktop API key: %w", err)
+	}
+
+	session.State = DesktopAuthAuthorized
+	session.APIKeyID = key.ID
+	session.AccessToken = key.Key
+	session.BaseURL = strings.TrimRight(baseURL, "/") + "/v1"
+	session.DefaultModel = desktopAuthDefaultModel
+	session.ProviderName = "Sub2API subscription"
+	if err := s.save(ctx, session); err != nil {
+		return nil, err
+	}
+	return statusFromDesktopSession(session), nil
+}
+
+func (s *DesktopAuthService) PollToken(ctx context.Context, sessionID, codeVerifier string) (*DesktopAuthSession, *DesktopAuthStatusResponse, error) {
+	session, err := s.load(ctx, sessionID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if session.ExpiresAt.Before(time.Now()) {
+		return nil, nil, ErrDesktopAuthSessionExpired
+	}
+	if session.State != DesktopAuthAuthorized {
+		return &session, statusFromDesktopSession(session), nil
+	}
+	if !verifyCodeChallenge(codeVerifier, session.CodeChallenge) {
+		return nil, nil, ErrDesktopAuthInvalidVerifier
+	}
+	if session.AccessToken == "" || session.BaseURL == "" {
+		return nil, nil, ErrDesktopAuthNotAuthorized
+	}
+	if err := s.redis.Del(ctx, desktopAuthSessionPrefix+session.ID).Err(); err != nil {
+		return nil, nil, fmt.Errorf("consume desktop authorization session: %w", err)
+	}
+	return &session, statusFromDesktopSession(session), nil
+}
+
+func (s *DesktopAuthService) CancelSession(ctx context.Context, sessionID string) error {
+	if s.redis == nil {
+		return nil
+	}
+	return s.redis.Del(ctx, desktopAuthSessionPrefix+sessionID).Err()
+}
+
+func (s *DesktopAuthService) load(ctx context.Context, sessionID string) (DesktopAuthSession, error) {
+	if s.redis == nil {
+		return DesktopAuthSession{}, errors.New("desktop authorization storage is unavailable")
+	}
+	raw, err := s.redis.Get(ctx, desktopAuthSessionPrefix+sessionID).Result()
+	if errors.Is(err, redis.Nil) {
+		return DesktopAuthSession{}, ErrDesktopAuthSessionNotFound
+	}
+	if err != nil {
+		return DesktopAuthSession{}, err
+	}
+	var session DesktopAuthSession
+	if err := json.Unmarshal([]byte(raw), &session); err != nil {
+		return DesktopAuthSession{}, fmt.Errorf("decode desktop authorization session: %w", err)
+	}
+	return session, nil
+}
+
+func (s *DesktopAuthService) save(ctx context.Context, session DesktopAuthSession) error {
+	raw, err := json.Marshal(session)
+	if err != nil {
+		return err
+	}
+	return s.redis.Set(ctx, desktopAuthSessionPrefix+session.ID, raw, time.Until(session.ExpiresAt)).Err()
+}
+
+func statusFromDesktopSession(session DesktopAuthSession) *DesktopAuthStatusResponse {
+	return &DesktopAuthStatusResponse{
+		State:        session.State,
+		ProviderName: session.ProviderName,
+		DefaultModel: session.DefaultModel,
+	}
+}
+
+func verifyCodeChallenge(verifier, expected string) bool {
+	sum := sha256.Sum256([]byte(verifier))
+	actual := base64.RawURLEncoding.EncodeToString(sum[:])
+	return subtle.ConstantTimeCompare([]byte(actual), []byte(expected)) == 1
+}
+
+func isValidCodeChallenge(value string) bool {
+	if len(value) < 43 || len(value) > 128 {
+		return false
+	}
+	for _, r := range value {
+		if !(r >= 'A' && r <= 'Z') && !(r >= 'a' && r <= 'z') && !(r >= '0' && r <= '9') && r != '-' && r != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+func randomDesktopAuthID() (string, error) {
+	b := make([]byte, 24)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return "dsa_" + hex.EncodeToString(b), nil
+}
+
+func normalizeDesktopDeviceName(value string) string {
+	value = strings.Join(strings.Fields(value), " ")
+	if value == "" {
+		return "Codex Multi Launcher device"
+	}
+	if len(value) > 100 {
+		return value[:100]
+	}
+	return value
+}
+
+func desktopAuthKeyName(deviceName string) string {
+	return desktopAuthKeyNamePrefix + " - " + normalizeDesktopDeviceName(deviceName)
+}
