@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -27,6 +26,7 @@ const (
 
 var (
 	ErrDesktopAuthSessionNotFound = errors.New("desktop authorization session not found")
+	ErrDesktopAuthStoreNotFound   = errors.New("desktop authorization store entry not found")
 	ErrDesktopAuthSessionExpired  = errors.New("desktop authorization session expired")
 	ErrDesktopAuthInvalidClient   = errors.New("desktop authorization client is invalid")
 	ErrDesktopAuthInvalidVerifier = errors.New("desktop authorization verifier is invalid")
@@ -73,14 +73,20 @@ type DesktopAuthStatusResponse struct {
 }
 
 type DesktopAuthService struct {
-	redis               *redis.Client
+	store               DesktopAuthStore
 	apiKeyService       *APIKeyService
 	subscriptionService *SubscriptionService
 }
 
-func NewDesktopAuthService(redisClient *redis.Client, apiKeyService *APIKeyService, subscriptionService *SubscriptionService) *DesktopAuthService {
+type DesktopAuthStore interface {
+	Get(ctx context.Context, key string) (string, error)
+	Set(ctx context.Context, key, value string, ttl time.Duration) error
+	Delete(ctx context.Context, key string) error
+}
+
+func NewDesktopAuthService(store DesktopAuthStore, apiKeyService *APIKeyService, subscriptionService *SubscriptionService) *DesktopAuthService {
 	return &DesktopAuthService{
-		redis:               redisClient,
+		store:               store,
 		apiKeyService:       apiKeyService,
 		subscriptionService: subscriptionService,
 	}
@@ -93,7 +99,7 @@ func (s *DesktopAuthService) CreateSession(ctx context.Context, clientID, codeCh
 	if !isValidCodeChallenge(codeChallenge) {
 		return nil, ErrDesktopAuthInvalidVerifier
 	}
-	if s.redis == nil {
+	if s.store == nil {
 		return nil, errors.New("desktop authorization storage is unavailable")
 	}
 
@@ -192,25 +198,25 @@ func (s *DesktopAuthService) PollToken(ctx context.Context, sessionID, codeVerif
 	if session.AccessToken == "" || session.BaseURL == "" {
 		return nil, nil, ErrDesktopAuthNotAuthorized
 	}
-	if err := s.redis.Del(ctx, desktopAuthSessionPrefix+session.ID).Err(); err != nil {
+	if err := s.store.Delete(ctx, desktopAuthSessionPrefix+session.ID); err != nil {
 		return nil, nil, fmt.Errorf("consume desktop authorization session: %w", err)
 	}
 	return &session, statusFromDesktopSession(session), nil
 }
 
 func (s *DesktopAuthService) CancelSession(ctx context.Context, sessionID string) error {
-	if s.redis == nil {
+	if s.store == nil {
 		return nil
 	}
-	return s.redis.Del(ctx, desktopAuthSessionPrefix+sessionID).Err()
+	return s.store.Delete(ctx, desktopAuthSessionPrefix+sessionID)
 }
 
 func (s *DesktopAuthService) load(ctx context.Context, sessionID string) (DesktopAuthSession, error) {
-	if s.redis == nil {
+	if s.store == nil {
 		return DesktopAuthSession{}, errors.New("desktop authorization storage is unavailable")
 	}
-	raw, err := s.redis.Get(ctx, desktopAuthSessionPrefix+sessionID).Result()
-	if errors.Is(err, redis.Nil) {
+	raw, err := s.store.Get(ctx, desktopAuthSessionPrefix+sessionID)
+	if errors.Is(err, ErrDesktopAuthStoreNotFound) {
 		return DesktopAuthSession{}, ErrDesktopAuthSessionNotFound
 	}
 	if err != nil {
@@ -228,7 +234,7 @@ func (s *DesktopAuthService) save(ctx context.Context, session DesktopAuthSessio
 	if err != nil {
 		return err
 	}
-	return s.redis.Set(ctx, desktopAuthSessionPrefix+session.ID, raw, time.Until(session.ExpiresAt)).Err()
+	return s.store.Set(ctx, desktopAuthSessionPrefix+session.ID, string(raw), time.Until(session.ExpiresAt))
 }
 
 func statusFromDesktopSession(session DesktopAuthSession) *DesktopAuthStatusResponse {
@@ -250,7 +256,10 @@ func isValidCodeChallenge(value string) bool {
 		return false
 	}
 	for _, r := range value {
-		if !(r >= 'A' && r <= 'Z') && !(r >= 'a' && r <= 'z') && !(r >= '0' && r <= '9') && r != '-' && r != '_' {
+		isUpper := r >= 'A' && r <= 'Z'
+		isLower := r >= 'a' && r <= 'z'
+		isDigit := r >= '0' && r <= '9'
+		if !(isUpper || isLower || isDigit || r == '-' || r == '_') {
 			return false
 		}
 	}

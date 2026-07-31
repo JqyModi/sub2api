@@ -7,15 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alicebob/miniredis/v2"
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDesktopAuthSessionUsesPKCEAndIsConsumedOnce(t *testing.T) {
-	miniRedis := miniredis.RunT(t)
-	client := redis.NewClient(&redis.Options{Addr: miniRedis.Addr()})
-	svc := NewDesktopAuthService(client, nil, nil)
+	store := newTestDesktopAuthStore()
+	svc := NewDesktopAuthService(store, nil, nil)
 	verifier := "desktop-auth-verifier-for-test"
 	sum := sha256.Sum256([]byte(verifier))
 	challenge := base64.RawURLEncoding.EncodeToString(sum[:])
@@ -45,14 +42,46 @@ func TestDesktopAuthSessionUsesPKCEAndIsConsumedOnce(t *testing.T) {
 	require.ErrorIs(t, err, ErrDesktopAuthSessionNotFound)
 }
 
-func TestDesktopAuthSessionExpiresInRedis(t *testing.T) {
-	miniRedis := miniredis.RunT(t)
-	client := redis.NewClient(&redis.Options{Addr: miniRedis.Addr()})
-	svc := NewDesktopAuthService(client, nil, nil)
+func TestDesktopAuthSessionExpiresInStore(t *testing.T) {
+	store := newTestDesktopAuthStore()
+	svc := NewDesktopAuthService(store, nil, nil)
 
 	session, err := svc.CreateSession(context.Background(), desktopAuthClientID, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_", "", "https://service.example/desktop/authorize")
 	require.NoError(t, err)
-	miniRedis.FastForward(desktopAuthSessionTTL + time.Second)
+	store.expiredAt[desktopAuthSessionPrefix+session.SessionID] = time.Now().Add(-time.Second)
 	_, err = svc.load(context.Background(), session.SessionID)
 	require.ErrorIs(t, err, ErrDesktopAuthSessionNotFound)
+}
+
+type testDesktopAuthStore struct {
+	values    map[string]string
+	expiredAt map[string]time.Time
+}
+
+func newTestDesktopAuthStore() *testDesktopAuthStore {
+	return &testDesktopAuthStore{values: map[string]string{}, expiredAt: map[string]time.Time{}}
+}
+
+func (s *testDesktopAuthStore) Get(_ context.Context, key string) (string, error) {
+	if expiresAt, ok := s.expiredAt[key]; ok && time.Now().After(expiresAt) {
+		delete(s.values, key)
+		return "", ErrDesktopAuthStoreNotFound
+	}
+	value, ok := s.values[key]
+	if !ok {
+		return "", ErrDesktopAuthStoreNotFound
+	}
+	return value, nil
+}
+
+func (s *testDesktopAuthStore) Set(_ context.Context, key, value string, ttl time.Duration) error {
+	s.values[key] = value
+	s.expiredAt[key] = time.Now().Add(ttl)
+	return nil
+}
+
+func (s *testDesktopAuthStore) Delete(_ context.Context, key string) error {
+	delete(s.values, key)
+	delete(s.expiredAt, key)
+	return nil
 }
