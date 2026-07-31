@@ -54,6 +54,7 @@ type DesktopAuthSession struct {
 	BaseURL       string                  `json:"base_url,omitempty"`
 	DefaultModel  string                  `json:"default_model,omitempty"`
 	ProviderName  string                  `json:"provider_name,omitempty"`
+	SubscriptionExpiresAt *time.Time      `json:"subscription_expires_at,omitempty"`
 	ExpiresAt     time.Time               `json:"expires_at"`
 }
 
@@ -182,6 +183,8 @@ func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID strin
 	session.BaseURL = strings.TrimRight(baseURL, "/") + "/v1"
 	session.DefaultModel = desktopAuthDefaultModel
 	session.ProviderName = "Sub2API subscription"
+	subscriptionExpiresAt := subscription.ExpiresAt.UTC()
+	session.SubscriptionExpiresAt = &subscriptionExpiresAt
 	if err := s.save(ctx, session); err != nil {
 		return nil, err
 	}
@@ -249,6 +252,7 @@ func statusFromDesktopSession(session DesktopAuthSession) *DesktopAuthStatusResp
 		State:        session.State,
 		ProviderName: session.ProviderName,
 		DefaultModel: session.DefaultModel,
+		SubscriptionExpiresAt: session.SubscriptionExpiresAt,
 	}
 }
 

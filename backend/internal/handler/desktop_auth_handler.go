@@ -68,6 +68,7 @@ func (h *DesktopAuthHandler) PollToken(c *gin.Context) {
 		"base_url":      session.BaseURL,
 		"default_model": session.DefaultModel,
 		"provider_name": session.ProviderName,
+		"expires_at": session.SubscriptionExpiresAt,
 	})
 }
 

@@ -78,6 +78,7 @@ func TestDesktopAuthApprovalCreatesUserDeviceKey(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "sk-device-test", consumed.AccessToken)
 	require.Equal(t, "https://service.example/v1", consumed.BaseURL)
+	require.NotNil(t, consumed.SubscriptionExpiresAt)
 }
 
 type testDesktopAuthStore struct {

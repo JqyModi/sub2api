@@ -56,11 +56,13 @@ func TestDesktopAuthHTTPFlow(t *testing.T) {
 		Data struct {
 			AccessToken string `json:"access_token"`
 			BaseURL     string `json:"base_url"`
+			ExpiresAt   string `json:"expires_at"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(token.Body.Bytes(), &exchanged))
 	require.Equal(t, "sk-http-device-key", exchanged.Data.AccessToken)
 	require.Equal(t, "https://example.test/v1", exchanged.Data.BaseURL)
+	require.NotEmpty(t, exchanged.Data.ExpiresAt)
 
 	reused := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/token", `{"session_id":"`+created.Data.SessionID+`","code_verifier":"`+verifier+`"}`)
 	require.NotEqual(t, http.StatusOK, reused.Code)
