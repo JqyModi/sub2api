@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
 )
 
 const (
@@ -259,9 +258,10 @@ func isValidCodeChallenge(value string) bool {
 		isUpper := r >= 'A' && r <= 'Z'
 		isLower := r >= 'a' && r <= 'z'
 		isDigit := r >= '0' && r <= '9'
-		if !(isUpper || isLower || isDigit || r == '-' || r == '_') {
-			return false
+		if isUpper || isLower || isDigit || r == '-' || r == '_' {
+			continue
 		}
+		return false
 	}
 	return true
 }
