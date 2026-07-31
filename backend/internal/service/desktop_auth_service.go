@@ -73,8 +73,8 @@ type DesktopAuthStatusResponse struct {
 
 type DesktopAuthService struct {
 	store               DesktopAuthStore
-	apiKeyService       *APIKeyService
-	subscriptionService *SubscriptionService
+	apiKeyIssuer        DesktopAuthKeyIssuer
+	subscriptionReader  DesktopAuthSubscriptionReader
 }
 
 type DesktopAuthStore interface {
@@ -83,11 +83,19 @@ type DesktopAuthStore interface {
 	Delete(ctx context.Context, key string) error
 }
 
-func NewDesktopAuthService(store DesktopAuthStore, apiKeyService *APIKeyService, subscriptionService *SubscriptionService) *DesktopAuthService {
+type DesktopAuthKeyIssuer interface {
+	Create(ctx context.Context, userID int64, req CreateAPIKeyRequest) (*APIKey, error)
+}
+
+type DesktopAuthSubscriptionReader interface {
+	ListActiveUserSubscriptions(ctx context.Context, userID int64) ([]UserSubscription, error)
+}
+
+func NewDesktopAuthService(store DesktopAuthStore, apiKeyIssuer DesktopAuthKeyIssuer, subscriptionReader DesktopAuthSubscriptionReader) *DesktopAuthService {
 	return &DesktopAuthService{
 		store:               store,
-		apiKeyService:       apiKeyService,
-		subscriptionService: subscriptionService,
+		apiKeyIssuer:        apiKeyIssuer,
+		subscriptionReader:  subscriptionReader,
 	}
 }
 
@@ -141,11 +149,11 @@ func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID strin
 	if session.State == DesktopAuthAuthorized {
 		return statusFromDesktopSession(session), nil
 	}
-	if s.subscriptionService == nil || s.apiKeyService == nil {
+	if s.subscriptionReader == nil || s.apiKeyIssuer == nil {
 		return nil, errors.New("desktop authorization dependencies are unavailable")
 	}
 
-	subscriptions, err := s.subscriptionService.ListActiveUserSubscriptions(ctx, userID)
+	subscriptions, err := s.subscriptionReader.ListActiveUserSubscriptions(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list active subscriptions: %w", err)
 	}
@@ -160,7 +168,7 @@ func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID strin
 
 	subscription := subscriptions[0]
 	groupID := subscription.GroupID
-	key, err := s.apiKeyService.Create(ctx, userID, CreateAPIKeyRequest{
+	key, err := s.apiKeyIssuer.Create(ctx, userID, CreateAPIKeyRequest{
 		Name:    desktopAuthKeyName(session.DeviceName),
 		GroupID: &groupID,
 	})

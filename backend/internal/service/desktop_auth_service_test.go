@@ -53,6 +53,33 @@ func TestDesktopAuthSessionExpiresInStore(t *testing.T) {
 	require.ErrorIs(t, err, ErrDesktopAuthSessionNotFound)
 }
 
+func TestDesktopAuthApprovalCreatesUserDeviceKey(t *testing.T) {
+	store := newTestDesktopAuthStore()
+	issuer := &testDesktopAuthKeyIssuer{key: &APIKey{ID: 99, Key: "sk-device-test"}}
+	reader := &testDesktopAuthSubscriptionReader{subscriptions: []UserSubscription{{
+		ID: 7, UserID: 42, GroupID: 12, ExpiresAt: time.Now().Add(30 * 24 * time.Hour),
+	}}}
+	svc := NewDesktopAuthService(store, issuer, reader)
+	verifier := "desktop-auth-approval-verifier"
+	sum := sha256.Sum256([]byte(verifier))
+	challenge := base64.RawURLEncoding.EncodeToString(sum[:])
+
+	created, err := svc.CreateSession(context.Background(), desktopAuthClientID, challenge, "MacBook", "https://service.example/desktop/authorize")
+	require.NoError(t, err)
+
+	status, err := svc.ApproveSession(context.Background(), created.SessionID, 42, "https://service.example")
+	require.NoError(t, err)
+	require.Equal(t, DesktopAuthAuthorized, status.State)
+	require.Equal(t, int64(42), issuer.userID)
+	require.Equal(t, int64(12), *issuer.request.GroupID)
+	require.Equal(t, "Codex Multi Launcher - MacBook", issuer.request.Name)
+
+	consumed, _, err := svc.PollToken(context.Background(), created.SessionID, verifier)
+	require.NoError(t, err)
+	require.Equal(t, "sk-device-test", consumed.AccessToken)
+	require.Equal(t, "https://service.example/v1", consumed.BaseURL)
+}
+
 type testDesktopAuthStore struct {
 	values    map[string]string
 	expiredAt map[string]time.Time
@@ -84,4 +111,24 @@ func (s *testDesktopAuthStore) Delete(_ context.Context, key string) error {
 	delete(s.values, key)
 	delete(s.expiredAt, key)
 	return nil
+}
+
+type testDesktopAuthKeyIssuer struct {
+	key     *APIKey
+	request CreateAPIKeyRequest
+	userID  int64
+}
+
+func (s *testDesktopAuthKeyIssuer) Create(_ context.Context, userID int64, request CreateAPIKeyRequest) (*APIKey, error) {
+	s.userID = userID
+	s.request = request
+	return s.key, nil
+}
+
+type testDesktopAuthSubscriptionReader struct {
+	subscriptions []UserSubscription
+}
+
+func (s *testDesktopAuthSubscriptionReader) ListActiveUserSubscriptions(_ context.Context, _ int64) ([]UserSubscription, error) {
+	return s.subscriptions, nil
 }
