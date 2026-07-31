@@ -1,0 +1,62 @@
+name: Desktop Auth Compose Smoke
+
+on:
+  push:
+    branches:
+      - jqy/desktop-auth
+  pull_request:
+    branches:
+      - jqy/desktop-auth
+
+permissions:
+  contents: read
+
+jobs:
+  compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: deploy
+    steps:
+      - uses: actions/checkout@v6
+      - name: Prepare isolated test configuration
+        run: |
+          cat > .env <<'EOF'
+          BIND_HOST=127.0.0.1
+          SERVER_PORT=8080
+          SERVER_MODE=release
+          POSTGRES_USER=sub2api
+          POSTGRES_PASSWORD=desktop-auth-smoke-password
+          POSTGRES_DB=sub2api
+          ADMIN_EMAIL=admin@sub2api.local
+          ADMIN_PASSWORD=desktop-auth-smoke-admin
+          JWT_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          TOTP_ENCRYPTION_KEY=abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+          TZ=UTC
+          EOF
+          mkdir -p data postgres_data redis_data
+      - name: Build fork image and start dependencies
+        run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -d --build
+      - name: Verify health and desktop authorization route
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:8080/health >/dev/null; then
+              break
+            fi
+            test "$attempt" -lt 30 || exit 1
+            sleep 2
+          done
+
+          challenge=$(printf 'a%.0s' {1..43})
+          response=$(curl --fail --silent --show-error \
+            --header 'Content-Type: application/json' \
+            --data "{\"client_id\":\"codex-multi-launcher\",\"device_name\":\"CI\",\"code_challenge\":\"${challenge}\"}" \
+            http://127.0.0.1:8080/api/v1/desktop-auth/sessions)
+          jq --exit-status '.data.session_id and .data.authorization_url' <<<"$response" >/dev/null
+      - name: Print service logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml logs --no-color sub2api postgres redis
+      - name: Stop services
+        if: always()
+        run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml down --volumes --remove-orphans
