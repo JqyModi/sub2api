@@ -11,7 +11,7 @@
 
 ## 启动 Sub2API
 
-在 Sub2API 仓库根目录执行：
+在 Sub2API fork 的 `deploy` 目录执行。必须叠加 `docker-compose.codex-auth.yml` 构建当前 fork；直接使用默认 Compose 会拉取上游镜像，桌面授权接口不存在。
 
 ```bash
 cd deploy
@@ -32,8 +32,8 @@ SERVER_PORT=8080
 启动服务：
 
 ```bash
-docker compose -f docker-compose.local.yml up -d
-docker compose -f docker-compose.local.yml logs -f sub2api
+docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -d --build
+docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml logs -f sub2api
 ```
 
 确认 `http://127.0.0.1:8080/health` 返回 200。
@@ -88,7 +88,7 @@ CODEX_PROFILE_MANAGER_SUBSCRIPTION_SERVICE_URL=http://127.0.0.1:8080 npm run dev
 
 ```bash
 cd deploy
-docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml down
 ```
 
 仅在确认不再需要测试数据时删除 `deploy/data`、`deploy/postgres_data` 和 `deploy/redis_data`。

@@ -1,0 +1,13 @@
+# Codex Multi Launcher desktop authorization deployment overlay.
+#
+# Use this file together with docker-compose.local.yml from this fork:
+# docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -d --build
+#
+# The base Compose file intentionally uses the upstream public image. This
+# overlay builds the checked-out fork so /api/v1/desktop-auth is present.
+services:
+  sub2api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: ${CODEX_AUTH_IMAGE:-jqymodi/sub2api-codex-auth:local}
