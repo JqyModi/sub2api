@@ -249,9 +249,9 @@ func (s *DesktopAuthService) save(ctx context.Context, session DesktopAuthSessio
 
 func statusFromDesktopSession(session DesktopAuthSession) *DesktopAuthStatusResponse {
 	return &DesktopAuthStatusResponse{
-		State:        session.State,
-		ProviderName: session.ProviderName,
-		DefaultModel: session.DefaultModel,
+		State:                 session.State,
+		ProviderName:          session.ProviderName,
+		DefaultModel:          session.DefaultModel,
 		SubscriptionExpiresAt: session.SubscriptionExpiresAt,
 	}
 }

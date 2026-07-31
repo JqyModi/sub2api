@@ -64,11 +64,11 @@ func (h *DesktopAuthHandler) PollToken(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{
-		"access_token":   session.AccessToken,
-		"base_url":       session.BaseURL,
-		"default_model":  session.DefaultModel,
-		"expires_at":     session.SubscriptionExpiresAt,
-		"provider_name":  session.ProviderName,
+		"access_token":  session.AccessToken,
+		"base_url":      session.BaseURL,
+		"default_model": session.DefaultModel,
+		"expires_at":    session.SubscriptionExpiresAt,
+		"provider_name": session.ProviderName,
 	})
 }
 
