@@ -73,6 +73,13 @@ jobs:
           HTTPServer(("0.0.0.0", 18080), Handler).serve_forever()
           PY
           nohup python3 /tmp/fake-openai.py >/tmp/fake-openai.log 2>&1 &
+          for attempt in $(seq 1 10); do
+            if curl --silent --fail http://127.0.0.1:18080/v1/models >/dev/null; then
+              break
+            fi
+            test "$attempt" -lt 10 || { cat /tmp/fake-openai.log; exit 1; }
+            sleep 1
+          done
       - name: Verify complete desktop authorization flow
         run: |
           trap 'echo "Desktop authorization smoke failed at script line $LINENO" >&2' ERR
