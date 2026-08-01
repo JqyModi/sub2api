@@ -62,7 +62,7 @@ jobs:
             http://127.0.0.1:8080/api/v1/admin/compliance/accept >/dev/null
 
           group=$(api --header "Authorization: Bearer $admin_token" \
-            --data '{"name":"Desktop Auth Smoke","platform":"openai","subscription_type":"subscription"}' \
+            --data '{"name":"Desktop Auth Smoke","platform":"openai","subscription_type":"subscription","rate_multiplier":1}' \
             http://127.0.0.1:8080/api/v1/admin/groups)
           group_id=$(jq --raw-output '.data.id' <<<"$group")
           test "$group_id" != null
