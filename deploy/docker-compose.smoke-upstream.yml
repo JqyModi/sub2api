@@ -1,0 +1,10 @@
+# CI-only fake upstream overlay. Never use this file in production.
+services:
+  fake-upstream:
+    image: python:3.12-alpine
+    command: ["python3", "/tmp/fake-openai.py"]
+    volumes:
+      - ./tests/fake-openai.py:/tmp/fake-openai.py:ro
+    networks:
+      - sub2api-network
+

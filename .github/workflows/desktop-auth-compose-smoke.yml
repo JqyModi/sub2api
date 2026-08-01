@@ -37,49 +37,7 @@ jobs:
           EOF
           mkdir -p data postgres_data redis_data
       - name: Build fork image and start dependencies
-        run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -d --build
-      - name: Start isolated OpenAI-compatible fake upstream
-        run: |
-          cat > /tmp/fake-openai.py <<'PY'
-          import json
-          from http.server import BaseHTTPRequestHandler, HTTPServer
-
-          class Handler(BaseHTTPRequestHandler):
-              def do_GET(self):
-                  if self.path == "/v1/models":
-                      self.send_json({"object": "list", "data": [{"id": "gpt-5-codex", "object": "model", "owned_by": "ci"}]})
-                  else:
-                      self.send_error(404)
-
-              def do_POST(self):
-                  length = int(self.headers.get("Content-Length", "0"))
-                  body = json.loads(self.rfile.read(length) or "{}")
-                  if self.path == "/v1/responses":
-                      self.send_json({"id": "resp_ci", "object": "response", "status": "completed", "model": body.get("model"), "output": [{"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "fake upstream ok"}]}]})
-                  else:
-                      self.send_error(404)
-
-              def send_json(self, payload):
-                  raw = json.dumps(payload).encode()
-                  self.send_response(200)
-                  self.send_header("Content-Type", "application/json")
-                  self.send_header("Content-Length", str(len(raw)))
-                  self.end_headers()
-                  self.wfile.write(raw)
-
-              def log_message(self, *_):
-                  pass
-
-          HTTPServer(("0.0.0.0", 18080), Handler).serve_forever()
-          PY
-          nohup python3 /tmp/fake-openai.py >/tmp/fake-openai.log 2>&1 &
-          for attempt in $(seq 1 10); do
-            if curl --silent --fail http://127.0.0.1:18080/v1/models >/dev/null; then
-              break
-            fi
-            test "$attempt" -lt 10 || { cat /tmp/fake-openai.log; exit 1; }
-            sleep 1
-          done
+        run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml -f docker-compose.smoke-upstream.yml up -d --build
       - name: Verify complete desktop authorization flow
         run: |
           trap 'echo "Desktop authorization smoke failed at script line $LINENO" >&2' ERR
@@ -110,7 +68,7 @@ jobs:
           test "$group_id" != null
 
           api --header "Authorization: Bearer $admin_token" \
-            --data "{\"name\":\"CI Fake OpenAI\",\"platform\":\"openai\",\"type\":\"apikey\",\"credentials\":{\"api_key\":\"ci-upstream-key\",\"base_url\":\"http://host.docker.internal:18080/v1\"},\"group_ids\":[$group_id],\"confirm_mixed_channel_risk\":true}" \
+            --data "{\"name\":\"CI Fake OpenAI\",\"platform\":\"openai\",\"type\":\"apikey\",\"credentials\":{\"api_key\":\"ci-upstream-key\",\"base_url\":\"http://fake-upstream:18080/v1\"},\"group_ids\":[$group_id],\"confirm_mixed_channel_risk\":true}" \
             http://127.0.0.1:8080/api/v1/admin/accounts >/dev/null
 
           test_user=$(api --header "Authorization: Bearer $admin_token" \
@@ -170,7 +128,7 @@ jobs:
           test "$repeat_status" = 410
       - name: Print service logs on failure
         if: failure()
-        run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml logs --no-color sub2api postgres redis
+        run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml -f docker-compose.smoke-upstream.yml logs --no-color sub2api postgres redis fake-upstream
       - name: Stop services
         if: always()
-        run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml down --volumes --remove-orphans
+        run: docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml -f docker-compose.smoke-upstream.yml down --volumes --remove-orphans
