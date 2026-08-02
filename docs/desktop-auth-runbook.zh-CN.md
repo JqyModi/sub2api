@@ -40,6 +40,7 @@
 - 会话有效期 30 分钟，默认轮询间隔 2 秒，为注册和第三方支付预留合理操作时间。
 - `POST /token` 在成功后删除 Redis 会话；相同会话再次兑换返回 `410 Gone`。
 - 没有有效订阅时授权状态变为 `payment_required`，页面在同一标签页直接进入 `purchase?tab=subscription`。
+- 购买页携带有效桌面授权 `redirect` 时，Stripe/易支付等跳转支付会继续使用当前标签页，不调用 `window.open`；普通独立充值仍保留桌面弹窗方式。
 - 授权路径只允许站内 `/desktop/authorize?session=...`。登录、注册、购买、Stripe/Airwallex/易支付结果页都会保留该路径，支付履约后自动返回并继续授权；外部或畸形回跳地址会被拒绝。
 - 当前会选择用户的第一条有效订阅并为其分组创建一个 Key；尚没有“选择套餐/设备列表/设备撤销”专项界面。
 - 授权 URL 和返回的 `base_url` 必须与桌面端配置的订阅服务同源。公网服务应使用 HTTPS；仅 `localhost`、`127.0.0.1`、`::1` 本地开发地址允许 HTTP。
@@ -179,10 +180,11 @@ CODEX_PROFILE_MANAGER_SUBSCRIPTION_SERVICE_URL=http://127.0.0.1:8080 npm run dev
 1. 按 [本地验证手册](./desktop-auth-local-verification.zh-CN.md) 启动四容器并执行初始化脚本。
 2. 在桌面端创建向导选择“订阅服务”，点击“前往授权”。
 3. 注册全新普通用户，确认注册后直接进入带 `tab=subscription` 的购买页，不经过 Dashboard。
-4. 选择套餐并在本地模拟支付页完成支付，确认支付结果自动返回原 `/desktop/authorize?session=...`。
-5. 回到桌面端，等待状态变为已授权，创建 Profile。
-6. 打开 Profile，确认 `/v1/models` 和 `/v1/responses` 请求可用。
-7. 重启桌面端后再次打开该 Profile，确认加密保存的 Key 仍可用。
+4. 选择套餐，确认原浏览器标签从购买页进入本地模拟支付页，且没有新建支付窗口或标签。
+5. 完成支付，确认同一标签自动返回原 `/desktop/authorize?session=...`，页面显示接入成功。
+6. 回到桌面端，确认轮询状态变为已授权并自动聚焦 App，然后创建 Profile。
+7. 打开 Profile，确认 `/v1/models` 和 `/v1/responses` 请求可用。
+8. 重启桌面端后再次打开该 Profile，确认加密保存的 Key 仍可用。
 
 自动验证命令：
 
