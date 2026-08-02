@@ -4,7 +4,7 @@
 >
 > 对应桌面端分支：`jqy/sub2api-desktop-auth`
 >
-> 状态：本地 Docker、浏览器授权、桌面端授权和 Profile 创建闭环已验证；生产支付、上游账号和公网运维尚未上线。
+> 状态：本地 Docker、注册、真实订单、模拟签名支付回调、浏览器授权、桌面端授权和 Profile 创建闭环已验证；生产商户、上游账号和公网运维尚未上线。
 
 本手册记录 Codex Multi Launcher（以下简称“桌面端”）与本 fork 的 Sub2API 之间的订阅授权实现、部署方式、验收方法和边界。它是当前实现的运行记录，不包含管理员密码、支付凭据、上游账号密钥或任何测试用户凭据。
 
@@ -51,7 +51,7 @@
 
 ## 3. 容器与持久数据
 
-本地/单机 Compose 使用三项服务：
+本地/单机正式 Compose 使用三项服务：
 
 | 容器 | 默认镜像 | 作用 | 本地持久目录 |
 | --- | --- | --- | --- |
@@ -60,6 +60,8 @@
 | `sub2api-redis` | `redis:8-alpine` | 授权会话、缓存和短期状态 | `deploy/redis_data` |
 
 `docker-compose.local.yml` 单独启动时使用上游 `weishaw/sub2api:latest`，不包含桌面授权接口。必须叠加 `docker-compose.codex-auth.yml`，从本 fork 构建 `sub2api` 镜像。
+
+完整购买验收可再叠加 `docker-compose.desktop-auth-test.yml`，增加第四个 `fake-easypay` 容器。它只监听宿主机 `127.0.0.1:8090`，用于模拟商户支付页和签名 Webhook；生产环境不得加载该 overlay。
 
 ## 4. 首次部署
 
@@ -161,7 +163,7 @@ CODEX_PROFILE_MANAGER_SUBSCRIPTION_SERVICE_URL=http://127.0.0.1:8080 npm run dev
 
 1. 完成 Sub2API 管理端要求的合规确认。
 2. 创建订阅型分组，配置可用上游、分组额度和并发策略。
-3. 创建套餐并接入支付渠道；封闭测试可由管理员直接为测试用户分配有效订阅。
+3. 创建套餐并接入支付渠道；本地开发可按专项手册使用模拟易支付完整验证订单与履约。
 4. 确认用户在“我的订阅”能看到有效订阅和对应分组。
 5. 用户在桌面端创建 Profile 时选择“订阅服务”，点击“前往授权”，在浏览器登录并确认。
 
@@ -171,13 +173,21 @@ CODEX_PROFILE_MANAGER_SUBSCRIPTION_SERVICE_URL=http://127.0.0.1:8080 npm run dev
 
 ### 本地手测
 
-1. 管理员为普通测试用户分配有效订阅。
-2. 在桌面端创建向导选择“订阅服务”。
-3. 点击“前往授权”，确认浏览器地址为同一个服务域名的 `/desktop/authorize?session=...`。
-4. 登录测试用户并确认接入。
+1. 按 [本地验证手册](./desktop-auth-local-verification.zh-CN.md) 启动四容器并执行初始化脚本。
+2. 在桌面端创建向导选择“订阅服务”，点击“前往授权”。
+3. 注册全新普通用户，确认注册后返回原 `/desktop/authorize?session=...` 地址。
+4. 确认接入后进入购买页，选择套餐并在本地模拟支付页完成支付。
 5. 回到桌面端，等待状态变为已授权，创建 Profile。
 6. 打开 Profile，确认 `/v1/models` 和 `/v1/responses` 请求可用。
 7. 重启桌面端后再次打开该 Profile，确认加密保存的 Key 仍可用。
+
+自动验证命令：
+
+```bash
+cd deploy
+node testing/bootstrap-desktop-auth-test.mjs
+node testing/verify-desktop-auth-purchase.mjs
+```
 
 ### CI 和专项测试
 
@@ -215,7 +225,7 @@ docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -
 
 本地授权闭环已通过，但以下不是“已上线能力”：
 
-- 真实支付渠道、Webhook 验签、退款和风控策略仍需按运营方案配置和验证。
+- 本地已验证 EasyPay MD5 请求签名、错误回调拒绝、正确 Webhook 验签和订阅履约；真实商户通道、退款和风控策略仍需按运营方案配置和验证。
 - 上游账号池、Codex 长上下文、SSE、工具调用、配额和并发应基于实际供应商做压测。
 - 设备模型、设备数量限制、可视化设备撤销和 Key 自动轮换尚未单独实现；当前可通过既有 Key 管理能力人工处理。
 - 订阅变更、过期或退款后已签发 Key 的即时限制策略需要结合实际网关/分组规则进行生产验收。

@@ -1,6 +1,6 @@
 # Codex 多开助手桌面授权本地验证
 
-本手册验证 Sub2API fork 的桌面授权接口和 Codex Multi Launcher 的订阅服务入口。测试环境使用本地 Docker Compose，不需要配置真实支付渠道；通过管理员直接分配测试订阅来模拟支付 Webhook 履约后的最终状态。
+本手册验证 Sub2API fork 的桌面授权接口和 Codex Multi Launcher 的订阅服务入口。测试环境使用本地 Docker Compose 和仅限本地的模拟易支付服务，不需要真实商户凭据，但仍会创建真实订单、校验支付签名、处理 Webhook 并执行真实订阅履约。
 
 ## 前提
 
@@ -29,24 +29,50 @@ BIND_HOST=127.0.0.1
 SERVER_PORT=8080
 ```
 
-启动服务：
+启动服务。第三个 overlay 会额外启动 `fake-easypay`，只能用于本地开发验收，生产环境禁止加载：
 
 ```bash
-docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -d --build
-docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml logs -f sub2api
+docker compose \
+  -f docker-compose.local.yml \
+  -f docker-compose.codex-auth.yml \
+  -f docker-compose.desktop-auth-test.yml \
+  up -d --build
 ```
 
-确认 `http://127.0.0.1:8080/health` 返回 200。
+确认 `http://127.0.0.1:8080/health` 与 `http://127.0.0.1:8090/health` 均返回 200。
 
-## 准备订阅用户
+## 初始化注册、套餐和支付
 
-1. 用自动创建的管理员账号登录 `http://127.0.0.1:8080`。
-2. 创建一个订阅型分组，并创建可用的测试套餐。
-3. 注册一个普通测试用户。
-4. 在管理端为该用户分配这个分组的有效测试订阅。
-5. 确认用户能在“我的订阅”看到有效期和对应分组。
+执行可重复运行的初始化脚本：
 
-这里的管理员分配等价于真实支付 Webhook 完成订单履约之后的状态。正式环境必须仍由 Sub2API 现有订单、Webhook 验签和履约流程写入订阅，不能用浏览器返回参数直接授权。
+```bash
+node testing/bootstrap-desktop-auth-test.mjs
+```
+
+脚本会通过管理员 API 开启注册和支付，创建或更新：
+
+- 订阅分组 `Desktop Local Test`；
+- 可售套餐 `Desktop Local Monthly`；
+- 支付实例 `Desktop Local Fake EasyPay`；
+- 支付宝可见入口和本地购买地址。
+
+本地模拟商户固定值仅存在于测试 overlay 与初始化脚本中。它不能作为正式商户密钥，也不能部署到公网。
+
+## 自动验收真实购买闭环
+
+```bash
+node testing/verify-desktop-auth-purchase.mjs
+```
+
+每次执行都会创建一个全新的普通用户，并验证：
+
+1. 无订阅用户确认授权时得到 `payment_required`。
+2. 用户购买套餐后生成真实 subscription order。
+3. 错误 EasyPay 签名回调得到 HTTP 400。
+4. 模拟支付页提交正确签名 Webhook。
+5. 订单变为 `COMPLETED`，用户得到有效订阅。
+6. 桌面授权创建 `Codex Multi Launcher - <device>` Key。
+7. PKCE 兑换得到 `/v1` 地址和设备 Key，且同一会话不能兑换第二次。
 
 ## 验证网页和 API
 
@@ -60,10 +86,12 @@ http://127.0.0.1:8080/desktop/authorize?session=<desktop-session-id>
 
 1. 未登录时跳转登录，登录后保留 `session` 参数。
 2. 没有有效订阅时页面提示购买，并持续等待服务端状态。
-3. 管理端分配测试订阅后，页面自动完成授权。
-4. `POST /api/v1/desktop-auth/token` 只能使用正确的 PKCE verifier 成功兑换一次。
-5. 用户 API Key 列表中出现命名为 `Codex Multi Launcher - <device>` 的 Key，绑定到该订阅分组。
-6. 停用或过期订阅后，Sub2API API Key 中间件应拒绝这个订阅型分组的请求。
+3. 点击“查看套餐”，选择 `Desktop Local Monthly`，使用支付宝创建订单。
+4. 浏览器打开 `http://127.0.0.1:8090/pay?...`，点击“模拟支付成功”。
+5. 支付回调完成后授权页面自动继续。
+6. `POST /api/v1/desktop-auth/token` 只能使用正确的 PKCE verifier 成功兑换一次。
+7. 用户 API Key 列表中出现命名为 `Codex Multi Launcher - <device>` 的 Key，绑定到该订阅分组。
+8. 停用或过期订阅后，Sub2API API Key 中间件应拒绝这个订阅型分组的请求。
 
 ## 验证桌面端
 
@@ -88,7 +116,11 @@ CODEX_PROFILE_MANAGER_SUBSCRIPTION_SERVICE_URL=http://127.0.0.1:8080 npm run dev
 
 ```bash
 cd deploy
-docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml down
+docker compose \
+  -f docker-compose.local.yml \
+  -f docker-compose.codex-auth.yml \
+  -f docker-compose.desktop-auth-test.yml \
+  down
 ```
 
 仅在确认不再需要测试数据时删除 `deploy/data`、`deploy/postgres_data` 和 `deploy/redis_data`。
