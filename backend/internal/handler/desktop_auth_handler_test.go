@@ -40,11 +40,13 @@ func TestDesktopAuthHTTPFlow(t *testing.T) {
 	require.Equal(t, http.StatusOK, start.Code)
 	var created struct {
 		Data struct {
-			SessionID string `json:"session_id"`
+			SessionID        string `json:"session_id"`
+			AuthorizationURL string `json:"authorization_url"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(start.Body.Bytes(), &created))
 	require.NotEmpty(t, created.Data.SessionID)
+	require.Equal(t, "http://example.test/desktop/authorize?session="+created.Data.SessionID, created.Data.AuthorizationURL)
 
 	approve := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/sessions/"+created.Data.SessionID+"/approve", "{}")
 	require.Equal(t, http.StatusOK, approve.Code)
@@ -61,11 +63,41 @@ func TestDesktopAuthHTTPFlow(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(token.Body.Bytes(), &exchanged))
 	require.Equal(t, "sk-http-device-key", exchanged.Data.AccessToken)
-	require.Equal(t, "https://example.test/v1", exchanged.Data.BaseURL)
+	require.Equal(t, "http://example.test/v1", exchanged.Data.BaseURL)
 	require.NotEmpty(t, exchanged.Data.ExpiresAt)
 
 	reused := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/token", `{"session_id":"`+created.Data.SessionID+`","code_verifier":"`+verifier+`"}`)
 	require.Equal(t, http.StatusGone, reused.Code)
+}
+
+func TestDesktopAuthRequestOrigin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	tests := []struct {
+		name           string
+		target         string
+		forwardedProto string
+		expected       string
+	}{
+		{name: "direct HTTP", target: "http://127.0.0.1:8080/test", expected: "http://127.0.0.1:8080"},
+		{name: "direct HTTPS", target: "https://example.test/test", expected: "https://example.test"},
+		{name: "HTTPS reverse proxy", target: "http://example.test/test", forwardedProto: "https", expected: "https://example.test"},
+		{name: "HTTP reverse proxy", target: "https://example.test/test", forwardedProto: "http", expected: "http://example.test"},
+		{name: "invalid proxy header falls back to transport", target: "https://example.test/test", forwardedProto: "file", expected: "https://example.test"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			context, _ := gin.CreateTestContext(recorder)
+			request := httptest.NewRequest(http.MethodGet, test.target, nil)
+			if test.forwardedProto != "" {
+				request.Header.Set("X-Forwarded-Proto", test.forwardedProto)
+			}
+			context.Request = request
+
+			require.Equal(t, test.expected, requestOrigin(context))
+		})
+	}
 }
 
 func requestDesktopAuth(t *testing.T, router http.Handler, method, target, body string) *httptest.ResponseRecorder {

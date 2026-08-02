@@ -100,9 +100,12 @@ func (h *DesktopAuthHandler) Cancel(c *gin.Context) {
 }
 
 func requestOrigin(c *gin.Context) string {
-	scheme := c.GetHeader("X-Forwarded-Proto")
+	scheme := strings.ToLower(strings.TrimSpace(c.GetHeader("X-Forwarded-Proto")))
 	if scheme != "http" && scheme != "https" {
-		scheme = "https"
+		scheme = "http"
+		if c.Request.TLS != nil {
+			scheme = "https"
+		}
 	}
 	return scheme + "://" + c.Request.Host
 }
