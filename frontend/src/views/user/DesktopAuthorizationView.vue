@@ -36,9 +36,6 @@
         <button v-if="state === 'error' || state === 'expired'" class="btn btn-primary" type="button" :disabled="isLoading || !sessionId" @click="approve">
           {{ copy.retry }}
         </button>
-        <button v-if="state === 'authorized'" class="btn btn-primary" type="button" @click="closePage">
-          {{ copy.close }}
-        </button>
         <button v-if="state !== 'authorized'" class="btn btn-secondary" type="button" @click="closePage">
           {{ copy.cancel }}
         </button>
@@ -66,9 +63,9 @@ const errorMessage = ref('')
 let paymentPollTimer: number | null = null
 
 const copy = computed(() => locale.value.startsWith('zh') ? {
-  title: '连接桌面订阅服务', subtitle: '正在为 Codex 多开助手连接当前账号。', loading: '正在检查账号和订阅状态...', confirmDetail: '正在安全连接当前设备，不会在页面显示 API Key。', confirm: '确认接入', paymentRequired: '当前账号还没有有效订阅。', paymentDetail: '正在前往套餐页面，支付完成后会自动继续接入。', purchase: '购买套餐', retry: '重新检查', success: '接入成功', successDetail: 'Codex 多开助手正在完成 Profile 创建，可以关闭此页面。', close: '关闭页面', cancel: '取消'
+  title: '连接桌面订阅服务', subtitle: '正在为 Codex 多开助手连接当前账号。', loading: '正在检查账号和订阅状态...', confirmDetail: '正在安全连接当前设备，不会在页面显示 API Key。', confirm: '确认接入', paymentRequired: '当前账号还没有有效订阅。', paymentDetail: '正在前往套餐页面，支付完成后会自动继续接入。', purchase: '购买套餐', retry: '重新检查', success: '接入成功', successDetail: '正在返回 Codex 多开助手并完成 Profile 创建。', close: '关闭页面', cancel: '取消'
 } : {
-  title: 'Connect desktop subscription', subtitle: 'Connecting this account to Codex Multi Launcher.', loading: 'Checking your account and subscription...', confirmDetail: 'Securely connecting this device. The API key will not be shown.', confirm: 'Authorize', paymentRequired: 'No active subscription was found.', paymentDetail: 'Opening subscription plans. Authorization continues automatically after payment.', purchase: 'Buy a plan', retry: 'Check again', success: 'Connected', successDetail: 'Codex Multi Launcher is finishing profile creation. You can close this page.', close: 'Close page', cancel: 'Cancel'
+  title: 'Connect desktop subscription', subtitle: 'Connecting this account to Codex Multi Launcher.', loading: 'Checking your account and subscription...', confirmDetail: 'Securely connecting this device. The API key will not be shown.', confirm: 'Authorize', paymentRequired: 'No active subscription was found.', paymentDetail: 'Opening subscription plans. Authorization continues automatically after payment.', purchase: 'Buy a plan', retry: 'Check again', success: 'Connected', successDetail: 'Returning to Codex Multi Launcher to finish profile creation.', close: 'Close page', cancel: 'Cancel'
 })
 
 async function approve(): Promise<void> {

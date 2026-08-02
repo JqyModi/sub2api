@@ -3,6 +3,7 @@ import {
   buildDesktopSubscriptionPurchaseRedirect,
   resolveAuthRedirect,
   resolveDesktopAuthorizationRedirect,
+  shouldUseSameWindowForPayment,
 } from '../authRedirect'
 
 describe('resolveAuthRedirect', () => {
@@ -44,5 +45,12 @@ describe('resolveAuthRedirect', () => {
     expect(buildDesktopSubscriptionPurchaseRedirect('/desktop/authorize?session=dsa_test')).toBe(
       '/purchase?tab=subscription&redirect=%2Fdesktop%2Fauthorize%3Fsession%3Ddsa_test'
     )
+  })
+
+  it('keeps desktop authorization and mobile payments in the current window', () => {
+    expect(shouldUseSameWindowForPayment('/desktop/authorize?session=dsa_test', false)).toBe(true)
+    expect(shouldUseSameWindowForPayment(undefined, true)).toBe(true)
+    expect(shouldUseSameWindowForPayment(undefined, false)).toBe(false)
+    expect(shouldUseSameWindowForPayment('https://evil.example/steal', false)).toBe(false)
   })
 })

@@ -22,6 +22,7 @@ const showInfo = vi.hoisted(() => vi.fn())
 const showWarning = vi.hoisted(() => vi.fn())
 const getCheckoutInfo = vi.hoisted(() => vi.fn())
 const bridgeInvoke = vi.hoisted(() => vi.fn())
+const deviceState = vi.hoisted(() => ({ isMobile: true }))
 
 vi.mock('vue-router', async () => {
   const actual = await vi.importActual<typeof import('vue-router')>('vue-router')
@@ -84,7 +85,7 @@ vi.mock('@/api/payment', () => ({
 }))
 
 vi.mock('@/utils/device', () => ({
-  isMobileDevice: () => true,
+  isMobileDevice: () => deviceState.isMobile,
 }))
 
 function checkoutInfoFixture(overrides: Partial<CheckoutInfoResponse> = {}) {
@@ -218,6 +219,7 @@ async function mountSubscriptionConfirm(options: Parameters<typeof checkoutInfoW
   showWarning.mockReset()
   getCheckoutInfo.mockReset().mockResolvedValue(checkoutInfoWithPlansFixture(options))
   bridgeInvoke.mockReset()
+  deviceState.isMobile = true
   window.localStorage.clear()
   ;(window as Window & { WeixinJSBridge?: { invoke: typeof bridgeInvoke } }).WeixinJSBridge = undefined
 
@@ -236,6 +238,65 @@ async function mountSubscriptionConfirm(options: Parameters<typeof checkoutInfoW
   await flushPromises()
   return wrapper
 }
+
+describe('PaymentView desktop authorization payment launch', () => {
+  it('uses the current window for desktop authorization purchases', async () => {
+    const originalLocation = window.location
+    const locationState = { href: 'http://localhost/purchase', origin: 'http://localhost' }
+    Object.defineProperty(window, 'location', { configurable: true, value: locationState })
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null)
+
+    const wrapper = await mountSubscriptionConfirm()
+    deviceState.isMobile = false
+    routeState.query.redirect = '/desktop/authorize?session=dsa_payment_test'
+    createOrder.mockResolvedValue({
+      order_id: 901,
+      amount: 128,
+      pay_amount: 128,
+      fee_rate: 0,
+      expires_at: '2099-01-01T00:10:00.000Z',
+      payment_type: 'wxpay',
+      pay_url: 'http://127.0.0.1:8090/pay?order=901',
+      out_trade_no: 'sub2_desktop_901',
+    })
+
+    await wrapper.findAll('button').find(button => button.text().includes('128'))!.trigger('click')
+    await flushPromises()
+
+    expect(locationState.href).toBe('http://127.0.0.1:8090/pay?order=901')
+    expect(openSpy).not.toHaveBeenCalled()
+
+    openSpy.mockRestore()
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation })
+  })
+
+  it('keeps ordinary desktop purchases in a popup', async () => {
+    const wrapper = await mountSubscriptionConfirm()
+    deviceState.isMobile = false
+    const popup = { closed: false } as Window
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(popup)
+    createOrder.mockResolvedValue({
+      order_id: 902,
+      amount: 128,
+      pay_amount: 128,
+      fee_rate: 0,
+      expires_at: '2099-01-01T00:10:00.000Z',
+      payment_type: 'wxpay',
+      pay_url: 'http://127.0.0.1:8090/pay?order=902',
+      out_trade_no: 'sub2_regular_902',
+    })
+
+    await wrapper.findAll('button').find(button => button.text().includes('128'))!.trigger('click')
+    await flushPromises()
+
+    expect(openSpy).toHaveBeenCalledWith(
+      'http://127.0.0.1:8090/pay?order=902',
+      'paymentPopup',
+      expect.any(String),
+    )
+    openSpy.mockRestore()
+  })
+})
 
 async function mountSubscriptionPlanList(planCount: number) {
   vi.useRealTimers()

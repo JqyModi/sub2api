@@ -32,3 +32,7 @@ export function buildDesktopSubscriptionPurchaseRedirect(value: unknown): string
   })
   return `/purchase?${query.toString()}`
 }
+
+export function shouldUseSameWindowForPayment(value: unknown, isMobile: boolean): boolean {
+  return isMobile || resolveDesktopAuthorizationRedirect(value) !== null
+}

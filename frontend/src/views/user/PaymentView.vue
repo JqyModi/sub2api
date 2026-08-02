@@ -292,7 +292,7 @@ import { planValiditySuffix as validitySuffixOf } from '@/components/payment/val
 import type { PaymentMethodOption } from '@/components/payment/PaymentMethodSelector.vue'
 import { buildPaymentErrorToastMessage, describePaymentScenarioError } from './paymentUx'
 import { hasWechatResumeQuery, parseWechatResumeRoute, stripWechatResumeQuery } from './paymentWechatResume'
-import { resolveDesktopAuthorizationRedirect } from '@/utils/authRedirect'
+import { resolveDesktopAuthorizationRedirect, shouldUseSameWindowForPayment } from '@/utils/authRedirect'
 
 const i18n = useI18n()
 const { t } = i18n
@@ -866,6 +866,10 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
     persistRecoverySnapshot(decision.recovery)
 
     if (decision.kind === 'stripe_popup') {
+      if (shouldUseSameWindowForPayment(desktopAuthorizationRedirect.value, isMobileDevice())) {
+        window.location.href = decision.paymentState.payUrl
+        return
+      }
       openWindow(decision.paymentState.payUrl)
       return
     }
@@ -920,7 +924,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       return
     }
     if (decision.kind === 'redirect_waiting' && decision.paymentState.payUrl) {
-      if (isMobileDevice()) {
+      if (shouldUseSameWindowForPayment(desktopAuthorizationRedirect.value, isMobileDevice())) {
         window.location.href = decision.paymentState.payUrl
         return
       }
