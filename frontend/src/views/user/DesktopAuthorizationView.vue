@@ -33,8 +33,8 @@
         <button v-if="state === 'payment_required'" class="btn btn-primary" type="button" @click="goPurchase">
           {{ copy.purchase }}
         </button>
-        <button v-if="state !== 'authorized'" class="btn btn-primary" type="button" :disabled="isLoading || !sessionId" @click="approve">
-          {{ state === 'payment_required' ? copy.retry : copy.confirm }}
+        <button v-if="state === 'error' || state === 'expired'" class="btn btn-primary" type="button" :disabled="isLoading || !sessionId" @click="approve">
+          {{ copy.retry }}
         </button>
         <button v-if="state === 'authorized'" class="btn btn-primary" type="button" @click="closePage">
           {{ copy.close }}
@@ -52,6 +52,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '@/api'
 import { useI18n } from 'vue-i18n'
+import { buildDesktopSubscriptionPurchaseRedirect } from '@/utils/authRedirect'
 
 type AuthorizationState = 'pending' | 'payment_required' | 'authorized' | 'denied' | 'expired' | 'error'
 
@@ -65,9 +66,9 @@ const errorMessage = ref('')
 let paymentPollTimer: number | null = null
 
 const copy = computed(() => locale.value.startsWith('zh') ? {
-  title: '连接桌面订阅服务', subtitle: '为 Codex 多开助手授权当前账号的有效订阅。', loading: '正在检查授权状态...', confirmDetail: '确认后会为当前设备创建独立接入配置，不会在页面显示 API Key。', confirm: '确认接入', paymentRequired: '当前账号还没有有效订阅。', paymentDetail: '套餐会在新标签页打开。支付完成后，此页面会自动继续接入。', purchase: '查看套餐', retry: '重新检查', success: '接入成功', successDetail: '可以返回 Codex 多开助手继续创建 Profile。', close: '返回首页', cancel: '取消'
+  title: '连接桌面订阅服务', subtitle: '正在为 Codex 多开助手连接当前账号。', loading: '正在检查账号和订阅状态...', confirmDetail: '正在安全连接当前设备，不会在页面显示 API Key。', confirm: '确认接入', paymentRequired: '当前账号还没有有效订阅。', paymentDetail: '正在前往套餐页面，支付完成后会自动继续接入。', purchase: '购买套餐', retry: '重新检查', success: '接入成功', successDetail: 'Codex 多开助手正在完成 Profile 创建，可以关闭此页面。', close: '关闭页面', cancel: '取消'
 } : {
-  title: 'Connect desktop subscription', subtitle: 'Authorize the active subscription for Codex Multi Launcher.', loading: 'Checking authorization...', confirmDetail: 'A device-specific connection will be created. The API key will not be shown in this page.', confirm: 'Authorize', paymentRequired: 'No active subscription was found.', paymentDetail: 'Plans open in a new tab. This page continues automatically after payment succeeds.', purchase: 'View plans', retry: 'Check again', success: 'Connected', successDetail: 'Return to Codex Multi Launcher to create a profile.', close: 'Return home', cancel: 'Cancel'
+  title: 'Connect desktop subscription', subtitle: 'Connecting this account to Codex Multi Launcher.', loading: 'Checking your account and subscription...', confirmDetail: 'Securely connecting this device. The API key will not be shown.', confirm: 'Authorize', paymentRequired: 'No active subscription was found.', paymentDetail: 'Opening subscription plans. Authorization continues automatically after payment.', purchase: 'Buy a plan', retry: 'Check again', success: 'Connected', successDetail: 'Codex Multi Launcher is finishing profile creation. You can close this page.', close: 'Close page', cancel: 'Cancel'
 })
 
 async function approve(): Promise<void> {
@@ -81,10 +82,14 @@ async function approve(): Promise<void> {
   try {
     const { data } = await apiClient.post<{ state: AuthorizationState }>(`/desktop-auth/sessions/${encodeURIComponent(sessionId.value)}/approve`)
     state.value = data.state
+    if (data.state === 'payment_required') {
+      await goPurchase()
+    }
   } catch (error) {
     const candidate = error as { status?: number; message?: string }
     if (candidate.status === 402) {
       state.value = 'payment_required'
+      await goPurchase()
     } else {
       state.value = 'error'
       errorMessage.value = candidate.message || copy.value.paymentDetail
@@ -94,19 +99,22 @@ async function approve(): Promise<void> {
   }
 }
 
-function goPurchase(): void {
-  window.open(router.resolve('/purchase').href, '_blank', 'noopener,noreferrer')
+async function goPurchase(): Promise<void> {
+  const purchasePath = buildDesktopSubscriptionPurchaseRedirect(route.fullPath)
+  await router.replace(purchasePath || { path: '/purchase', query: { tab: 'subscription' } })
 }
 
 function closePage(): void {
-  void router.push('/dashboard')
+  window.close()
 }
 
 onMounted(() => {
   if (!sessionId.value) {
     state.value = 'error'
     errorMessage.value = 'Missing authorization session.'
+    return
   }
+  void approve()
 })
 
 watch(state, (nextState) => {

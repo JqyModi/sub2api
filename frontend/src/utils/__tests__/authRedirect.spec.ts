@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { resolveAuthRedirect } from '../authRedirect'
+import {
+  buildDesktopSubscriptionPurchaseRedirect,
+  resolveAuthRedirect,
+  resolveDesktopAuthorizationRedirect,
+} from '../authRedirect'
 
 describe('resolveAuthRedirect', () => {
   it('preserves a desktop authorization path and query', () => {
@@ -19,5 +23,26 @@ describe('resolveAuthRedirect', () => {
 
   it('uses the first route query value', () => {
     expect(resolveAuthRedirect(['/profile', '/dashboard'])).toBe('/profile')
+  })
+
+  it('recognizes a valid desktop authorization return path', () => {
+    expect(resolveDesktopAuthorizationRedirect('/desktop/authorize?session=dsa_test')).toBe(
+      '/desktop/authorize?session=dsa_test'
+    )
+  })
+
+  it.each([
+    '/desktop/authorize',
+    '/desktop/authorize?session=',
+    '/dashboard?session=dsa_test',
+    'https://evil.example/desktop/authorize?session=dsa_test',
+  ])('rejects a non-desktop authorization return %s', (value) => {
+    expect(resolveDesktopAuthorizationRedirect(value)).toBeNull()
+  })
+
+  it('builds a subscription-first purchase path that retains the authorization session', () => {
+    expect(buildDesktopSubscriptionPurchaseRedirect('/desktop/authorize?session=dsa_test')).toBe(
+      '/purchase?tab=subscription&redirect=%2Fdesktop%2Fauthorize%3Fsession%3Ddsa_test'
+    )
   })
 })

@@ -20,6 +20,7 @@ func TestDesktopAuthSessionUsesPKCEAndIsConsumedOnce(t *testing.T) {
 	created, err := svc.CreateSession(context.Background(), desktopAuthClientID, challenge, "Test device", "https://service.example/desktop/authorize")
 	require.NoError(t, err)
 	require.Equal(t, "https://service.example/desktop/authorize?session="+created.SessionID, created.AuthorizationURL)
+	require.Equal(t, 30*60, created.ExpiresIn)
 
 	session, err := svc.load(context.Background(), created.SessionID)
 	require.NoError(t, err)

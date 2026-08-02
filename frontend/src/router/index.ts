@@ -13,6 +13,7 @@ import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
 import { resolveRouteDocumentTitle } from './title'
+import { buildDesktopSubscriptionPurchaseRedirect, resolveAuthRedirect } from '@/utils/authRedirect'
 
 /**
  * Route definitions with lazy loading
@@ -823,8 +824,12 @@ router.beforeEach(async (to, _from, next) => {
         next()
         return
       }
-      // Admin users go to admin dashboard, regular users go to user dashboard
-      next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
+      const fallback = authStore.isAdmin ? '/admin/dashboard' : '/dashboard'
+      const requestedRedirect = resolveAuthRedirect(to.query.redirect, fallback)
+      const destination = to.path === '/register'
+        ? buildDesktopSubscriptionPurchaseRedirect(requestedRedirect) || requestedRedirect
+        : requestedRedirect
+      next(destination)
       return
     }
     // Model Plaza:公开路由但受「启用开关 + 可选强制登录」双重控制(后端同口径 fail-closed)

@@ -349,7 +349,7 @@ import {
   resolveAffiliateReferralCode
 } from '@/utils/oauthAffiliate'
 import type { LoginAgreementDocument } from '@/types'
-import { resolveAuthRedirect } from '@/utils/authRedirect'
+import { buildDesktopSubscriptionPurchaseRedirect, resolveAuthRedirect } from '@/utils/authRedirect'
 
 const { t, locale } = useI18n()
 const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
@@ -361,10 +361,13 @@ const route = useRoute()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
-const postRegistrationRedirect = computed(() => resolveAuthRedirect(route.query.redirect))
+const requestedRedirect = computed(() => resolveAuthRedirect(route.query.redirect))
+const postRegistrationRedirect = computed(() => (
+  buildDesktopSubscriptionPurchaseRedirect(requestedRedirect.value) || requestedRedirect.value
+))
 const loginRoute = computed(() => ({
   path: '/login',
-  query: postRegistrationRedirect.value === '/dashboard' ? {} : { redirect: postRegistrationRedirect.value }
+  query: requestedRedirect.value === '/dashboard' ? {} : { redirect: requestedRedirect.value }
 }))
 
 // ==================== State ====================

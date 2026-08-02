@@ -16,7 +16,7 @@ import (
 
 const (
 	desktopAuthClientID      = "codex-multi-launcher"
-	desktopAuthSessionTTL    = 5 * time.Minute
+	desktopAuthSessionTTL    = 30 * time.Minute
 	desktopAuthPollInterval  = 2
 	desktopAuthSessionPrefix = "desktop-auth:session:"
 	desktopAuthDefaultModel  = "gpt-5-codex"
