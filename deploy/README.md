@@ -21,6 +21,7 @@ This directory contains files for deploying Sub2API on Linux servers and Apple-s
 | `APPLE_CONTAINER.md` | Apple `container` deployment and operations guide |
 | `.env.example` | Container environment variables template |
 | `DOCKER.md` | Docker Hub documentation |
+| `../docs/desktop-auth-runbook.zh-CN.md` | Codex Multi Launcher subscription authorization deployment and operations runbook |
 | `install.sh` | One-click binary installation script |
 | `install-datamanagementd.sh` | datamanagementd 一键安装脚本 |
 | `sub2api.service` | Systemd service unit file |

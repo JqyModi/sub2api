@@ -1,6 +1,6 @@
 # Codex 多开助手授权服务部署
 
-本文件用于部署包含桌面授权接口的 Sub2API fork。不要只运行
+本文件用于快速部署包含桌面授权接口的 Sub2API fork。完整的架构、容器、配置、验收、运维边界和排障说明见 [desktop-auth-runbook.zh-CN.md](./desktop-auth-runbook.zh-CN.md)。不要只运行
 `docker-compose.local.yml`：其默认镜像是上游 `weishaw/sub2api:latest`，不含
 `/api/v1/desktop-auth`。
 
