@@ -1,0 +1,25 @@
+# Local-only payment simulator for the Codex desktop authorization flow.
+# Never include this overlay in a production deployment.
+services:
+  fake-easypay:
+    image: node:24-alpine
+    container_name: fake-easypay
+    restart: unless-stopped
+    command: ["node", "/app/fake-easypay-server.mjs"]
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8090
+      - PUBLIC_ORIGIN=http://127.0.0.1:8090
+      - EASYPAY_PID=desktop-auth-local
+      - EASYPAY_PKEY=desktop-auth-local-secret
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - ./testing:/app:ro
+    networks:
+      - sub2api-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://127.0.0.1:8090/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
