@@ -15,7 +15,7 @@
 | Codex Multi Launcher | 创建授权会话、打开浏览器、轮询授权结果、创建本地 Profile、加密保存用户设备 Key | 用户注册、套餐、支付、上游账号、额度和并发管理 |
 | Sub2API fork | 用户登录、套餐/订单/订阅、桌面授权页、设备 Key 创建、API 网关、额度和并发 | 管理本地 Codex Profile、保存桌面端管理员凭据 |
 | PostgreSQL | 用户、套餐、订阅、订单、Key、配置等持久数据 | 短期桌面授权会话 |
-| Redis | 5 分钟桌面授权会话和一次性兑换状态 | 持久订阅和用户数据 |
+| Redis | 30 分钟桌面授权会话和一次性兑换状态 | 持久订阅和用户数据 |
 
 桌面端不会拿到管理员 Token、上游账号 Token 或支付密钥。浏览器授权页也不显示设备 Key；Key 只在正确的 PKCE verifier 兑换成功后返回给发起该会话的桌面主进程。
 
@@ -24,8 +24,10 @@
 ```text
 桌面端选择“订阅服务”
   -> POST /api/v1/desktop-auth/sessions（携带 PKCE code_challenge）
-  -> 服务端将 5 分钟会话写入 Redis，返回 /desktop/authorize?session=...
-  -> 系统浏览器登录 Sub2API，用户确认接入
+  -> 服务端将 30 分钟会话写入 Redis，返回 /desktop/authorize?session=...
+  -> 系统浏览器登录 Sub2API，授权页自动检查当前订阅
+  -> 新用户注册后直接进入“订阅”购买页；已有无订阅用户登录后也自动进入购买页
+  -> 支付成功后自动回到原授权会话
   -> 服务端检查有效订阅，创建一个绑定订阅分组的用户设备 Key
   -> 桌面端轮询 POST /api/v1/desktop-auth/token（携带 code_verifier）
   -> 服务端校验 PKCE，单次返回 base_url、设备 Key、模型、到期时间
@@ -35,9 +37,10 @@
 实现要点：
 
 - 固定客户端标识为 `codex-multi-launcher`。
-- 会话有效期 5 分钟，默认轮询间隔 2 秒。
+- 会话有效期 30 分钟，默认轮询间隔 2 秒，为注册和第三方支付预留合理操作时间。
 - `POST /token` 在成功后删除 Redis 会话；相同会话再次兑换返回 `410 Gone`。
-- 没有有效订阅时确认接口返回 `402` 和 `payment_required`。授权页面每 5 秒重试确认，支付履约写入有效订阅后可继续。
+- 没有有效订阅时授权状态变为 `payment_required`，页面在同一标签页直接进入 `purchase?tab=subscription`。
+- 授权路径只允许站内 `/desktop/authorize?session=...`。登录、注册、购买、Stripe/Airwallex/易支付结果页都会保留该路径，支付履约后自动返回并继续授权；外部或畸形回跳地址会被拒绝。
 - 当前会选择用户的第一条有效订阅并为其分组创建一个 Key；尚没有“选择套餐/设备列表/设备撤销”专项界面。
 - 授权 URL 和返回的 `base_url` 必须与桌面端配置的订阅服务同源。公网服务应使用 HTTPS；仅 `localhost`、`127.0.0.1`、`::1` 本地开发地址允许 HTTP。
 
@@ -175,8 +178,8 @@ CODEX_PROFILE_MANAGER_SUBSCRIPTION_SERVICE_URL=http://127.0.0.1:8080 npm run dev
 
 1. 按 [本地验证手册](./desktop-auth-local-verification.zh-CN.md) 启动四容器并执行初始化脚本。
 2. 在桌面端创建向导选择“订阅服务”，点击“前往授权”。
-3. 注册全新普通用户，确认注册后返回原 `/desktop/authorize?session=...` 地址。
-4. 确认接入后进入购买页，选择套餐并在本地模拟支付页完成支付。
+3. 注册全新普通用户，确认注册后直接进入带 `tab=subscription` 的购买页，不经过 Dashboard。
+4. 选择套餐并在本地模拟支付页完成支付，确认支付结果自动返回原 `/desktop/authorize?session=...`。
 5. 回到桌面端，等待状态变为已授权，创建 Profile。
 6. 打开 Profile，确认 `/v1/models` 和 `/v1/responses` 请求可用。
 7. 重启桌面端后再次打开该 Profile，确认加密保存的 Key 仍可用。
@@ -198,7 +201,7 @@ node testing/verify-desktop-auth-purchase.mjs
 
 ## 8. 日常运维、升级与回滚
 
-升级前必须备份 `data`、`postgres_data` 和 `redis_data`。其中 PostgreSQL 最重要，Redis 丢失只会让尚未完成的 5 分钟授权会话失效。
+升级前必须备份 `data`、`postgres_data` 和 `redis_data`。其中 PostgreSQL 最重要，Redis 丢失只会让尚未完成的 30 分钟授权会话失效。
 
 ```bash
 docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml down
@@ -217,7 +220,7 @@ docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -
 | --- | --- |
 | 授权地址不可信 | 桌面端服务地址、授权 URL 是否同源、`X-Forwarded-Proto`、本地 HTTP/公网 HTTPS 规则 |
 | 认证页显示无有效订阅 | 用户登录身份、有效订阅、订阅分组、支付 Webhook 履约 |
-| 授权后桌面端一直等待 | `sub2api` 日志、Redis 健康、浏览器是否完成确认、会话是否超过 5 分钟 |
+| 授权后桌面端一直等待 | `sub2api` 日志、Redis 健康、支付结果是否保留 `redirect`、会话是否超过 30 分钟 |
 | Profile 创建失败 | 桌面端主进程日志、服务端 `/v1/models` 和 `/v1/responses`、分组上游路由 |
 | 重启后异常 | `.env` 中 JWT/TOTP 密钥是否被替换、PostgreSQL 数据目录和磁盘空间 |
 

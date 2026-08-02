@@ -73,6 +73,7 @@ node testing/verify-desktop-auth-purchase.mjs
 5. 订单变为 `COMPLETED`，用户得到有效订阅。
 6. 桌面授权创建 `Codex Multi Launcher - <device>` Key。
 7. PKCE 兑换得到 `/v1` 地址和设备 Key，且同一会话不能兑换第二次。
+8. 授权会话有效期为 30 分钟，可覆盖正常注册和支付操作。
 
 ## 验证网页和 API
 
@@ -84,14 +85,15 @@ http://127.0.0.1:8080/desktop/authorize?session=<desktop-session-id>
 
 预期：
 
-1. 未登录时跳转登录，登录后保留 `session` 参数。
-2. 没有有效订阅时页面提示购买，并持续等待服务端状态。
-3. 点击“查看套餐”，选择 `Desktop Local Monthly`，使用支付宝创建订单。
-4. 浏览器打开 `http://127.0.0.1:8090/pay?...`，点击“模拟支付成功”。
-5. 支付回调完成后授权页面自动继续。
-6. `POST /api/v1/desktop-auth/token` 只能使用正确的 PKCE verifier 成功兑换一次。
-7. 用户 API Key 列表中出现命名为 `Codex Multi Launcher - <device>` 的 Key，绑定到该订阅分组。
-8. 停用或过期订阅后，Sub2API API Key 中间件应拒绝这个订阅型分组的请求。
+1. 未登录时跳转登录，登录和注册链接都保留 `session` 参数。
+2. 新用户注册后直接进入 `/purchase?tab=subscription&redirect=...`，不进入 Dashboard。
+3. 已有无订阅用户登录后自动检查授权，并直接进入同一个订阅购买页。
+4. 选择 `Desktop Local Monthly`，使用支付宝创建订单。
+5. 浏览器打开 `http://127.0.0.1:8090/pay?...`，点击“模拟支付成功”。
+6. 支付结果自动返回原 `/desktop/authorize?session=...`，授权页自动完成接入。
+7. `POST /api/v1/desktop-auth/token` 只能使用正确的 PKCE verifier 成功兑换一次。
+8. 用户 API Key 列表中出现命名为 `Codex Multi Launcher - <device>` 的 Key，绑定到该订阅分组。
+9. 停用或过期订阅后，Sub2API API Key 中间件应拒绝这个订阅型分组的请求。
 
 ## 验证桌面端
 
