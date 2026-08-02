@@ -107,12 +107,14 @@ import type { PaymentOrder } from '@/types/payment'
 import type { Stripe, StripeElements } from '@stripe/stripe-js'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { resolveDesktopAuthorizationRedirect } from '@/utils/authRedirect'
 
 const i18n = useI18n()
 const { t } = i18n
 const route = useRoute()
 const router = useRouter()
 const paymentStore = usePaymentStore()
+const desktopAuthorizationRedirect = computed(() => resolveDesktopAuthorizationRedirect(route.query.redirect))
 
 // 弹窗模式：指定支付宝或微信方式时跳过 AppLayout
 const isPopup = computed(() => !!route.query.method)
@@ -203,9 +205,19 @@ function formatGatewayAmount(value: number): string {
   return formatPaymentAmount(value, currency.value, localeCode.value)
 }
 
+function buildPaymentResultURL(orderId: number): string {
+  const url = new URL('/payment/result', window.location.origin)
+  url.searchParams.set('order_id', String(orderId))
+  url.searchParams.set('status', 'success')
+  if (desktopAuthorizationRedirect.value) {
+    url.searchParams.set('redirect', desktopAuthorizationRedirect.value)
+  }
+  return url.toString()
+}
+
 async function confirmAlipay(stripe: Stripe, clientSecret: string, orderId: number) {
   redirecting.value = true
-  const returnUrl = window.location.origin + '/payment/result?order_id=' + orderId + '&status=success'
+  const returnUrl = buildPaymentResultURL(orderId)
   const { error } = await stripe.confirmAlipayPayment(clientSecret, { return_url: returnUrl })
   if (error) {
     redirecting.value = false
@@ -263,7 +275,7 @@ async function handleGenericPay() {
     const { error } = await stripeInstance.confirmPayment({
       elements: elementsInstance,
       confirmParams: {
-        return_url: window.location.origin + '/payment/result?order_id=' + route.query.order_id + '&status=success',
+        return_url: buildPaymentResultURL(Number(route.query.order_id)),
       },
       redirect: 'if_required',
     })
@@ -302,7 +314,9 @@ function scheduleClose() {
     redirectTimer = setTimeout(() => { window.close() }, 2000)
   } else {
     redirectTimer = setTimeout(() => {
-      router.push({ path: '/payment/result', query: { order_id: String(route.query.order_id || ''), status: 'success' } })
+      const query: Record<string, string> = { order_id: String(route.query.order_id || ''), status: 'success' }
+      if (desktopAuthorizationRedirect.value) query.redirect = desktopAuthorizationRedirect.value
+      router.push({ path: '/payment/result', query })
     }, 2000)
   }
 }

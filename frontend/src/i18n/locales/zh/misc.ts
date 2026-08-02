@@ -399,6 +399,8 @@ export default {
       failed: '支付失败',
       backToRecharge: '返回充值',
       viewOrders: '查看订单',
+      continuingAuthorization: '订阅已生效，正在继续连接 Codex 多开助手…',
+      continueAuthorization: '继续完成授权',
     },
     currentBalance: '当前余额',
     groupFallback: '分组 #{id}',

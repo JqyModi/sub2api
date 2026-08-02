@@ -41,6 +41,9 @@ const session = await request('/desktop-auth/sessions', {
     device_name: 'Automated Purchase Verification',
   }),
 })
+if (session.expires_in !== 30 * 60) {
+  throw new Error(`desktop authorization session should allow 30 minutes, got ${session.expires_in}`)
+}
 
 const firstApprove = await rawRequest(`/desktop-auth/sessions/${session.session_id}/approve`, {
   method: 'POST', token, body: '{}',

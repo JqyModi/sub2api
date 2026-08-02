@@ -35,6 +35,7 @@ import {
   readPaymentRecoverySnapshot,
   type PaymentRecoverySnapshot,
 } from '@/components/payment/paymentFlow'
+import { resolveDesktopAuthorizationRedirect } from '@/utils/authRedirect'
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -58,6 +59,8 @@ function buildSuccessUrl(snapshot: PaymentRecoverySnapshot): string {
   if (orderId || snapshot.orderId > 0) url.searchParams.set('order_id', orderId || String(snapshot.orderId))
   if (outTradeNo || snapshot.outTradeNo) url.searchParams.set('out_trade_no', outTradeNo || snapshot.outTradeNo)
   if (resumeToken || snapshot.resumeToken) url.searchParams.set('resume_token', resumeToken || snapshot.resumeToken)
+  const desktopRedirect = resolveDesktopAuthorizationRedirect(route.query.redirect)
+  if (desktopRedirect) url.searchParams.set('redirect', desktopRedirect)
   return url.toString()
 }
 

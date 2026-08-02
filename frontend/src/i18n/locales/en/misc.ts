@@ -375,6 +375,8 @@ export default {
       failed: 'Payment Failed',
       backToRecharge: 'Back to Recharge',
       viewOrders: 'View Orders',
+      continuingAuthorization: 'Your subscription is active. Continuing Codex Multi Launcher authorization…',
+      continueAuthorization: 'Continue authorization',
     },
     currentBalance: 'Current Balance',
     groupFallback: 'Group #{id}',

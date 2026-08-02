@@ -36,6 +36,13 @@ async function parseForm(req) {
 
 function renderPaymentPage(order, state = 'pending', detail = '') {
   const success = state === 'paid'
+  const returnURL = success ? new URL(order.return_url) : null
+  if (returnURL) {
+    returnURL.searchParams.set('out_trade_no', order.out_trade_no)
+    returnURL.searchParams.set('trade_status', 'TRADE_SUCCESS')
+    returnURL.searchParams.set('money', order.money)
+    returnURL.searchParams.set('type', order.type)
+  }
   return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>本地模拟支付</title><style>
@@ -46,7 +53,7 @@ button{width:100%;border:0;border-radius:8px;padding:12px;background:#1677ff;col
 </style></head><body><main><h1>${success ? '支付已完成' : '本地模拟支付'}</h1>
 <p class="${success ? 'ok' : 'note'}">${success ? '真实 Webhook 已通过验签并完成订阅履约。' : '仅用于本地验收，不会发生真实扣款。'}</p>
 <dl><dt>商品</dt><dd>${escapeHTML(order.name)}</dd><dt>金额</dt><dd>¥${escapeHTML(order.money)}</dd><dt>订单号</dt><dd>${escapeHTML(order.out_trade_no)}</dd></dl>
-${success ? `<p>${escapeHTML(detail)}</p><script>setTimeout(()=>window.close(),1800)</script>` : `<form method="post" action="/pay"><input type="hidden" name="out_trade_no" value="${escapeHTML(order.out_trade_no)}"><button type="submit">模拟支付成功</button></form>`}
+${success ? `<p>${escapeHTML(detail)}</p><script>setTimeout(()=>location.replace(${JSON.stringify(returnURL?.toString() || '')}),800)</script>` : `<form method="post" action="/pay"><input type="hidden" name="out_trade_no" value="${escapeHTML(order.out_trade_no)}"><button type="submit">模拟支付成功</button></form>`}
 </main></body></html>`
 }
 

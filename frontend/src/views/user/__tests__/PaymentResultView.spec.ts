@@ -6,6 +6,7 @@ const routeState = vi.hoisted(() => ({
 }))
 
 const routerPush = vi.hoisted(() => vi.fn())
+const routerReplace = vi.hoisted(() => vi.fn())
 const pollOrderStatus = vi.hoisted(() => vi.fn())
 const verifyOrder = vi.hoisted(() => vi.fn())
 const verifyOrderPublic = vi.hoisted(() => vi.fn())
@@ -16,7 +17,7 @@ vi.mock('vue-router', async () => {
   return {
     ...actual,
     useRoute: () => routeState,
-    useRouter: () => ({ push: routerPush }),
+    useRouter: () => ({ push: routerPush, replace: routerReplace }),
   }
 })
 
@@ -87,6 +88,7 @@ describe('PaymentResultView', () => {
   beforeEach(() => {
     routeState.query = {}
     routerPush.mockReset()
+    routerReplace.mockReset()
     pollOrderStatus.mockReset()
     verifyOrder.mockReset()
     verifyOrderPublic.mockReset()
@@ -498,5 +500,49 @@ describe('PaymentResultView', () => {
 
     expect(wrapper.text()).toContain('payment.methods.alipay')
     expect(wrapper.text()).not.toContain('payment.methods.alipay_direct')
+  })
+
+  it('continues a trusted desktop authorization flow after subscription payment succeeds', async () => {
+    vi.useFakeTimers()
+    routeState.query = {
+      order_id: '42',
+      redirect: '/desktop/authorize?session=dsa_result_test',
+    }
+    pollOrderStatus.mockResolvedValue(orderFactory('COMPLETED'))
+
+    const wrapper = mount(PaymentResultView, {
+      global: {
+        stubs: {
+          OrderStatusBadge: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    expect(wrapper.text()).toContain('payment.result.continuingAuthorization')
+    expect(routerReplace).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(800)
+    expect(routerReplace).toHaveBeenCalledWith('/desktop/authorize?session=dsa_result_test')
+  })
+
+  it('does not follow an untrusted payment-result redirect', async () => {
+    routeState.query = {
+      order_id: '42',
+      redirect: 'https://evil.example/steal',
+    }
+    pollOrderStatus.mockResolvedValue(orderFactory('COMPLETED'))
+
+    const wrapper = mount(PaymentResultView, {
+      global: {
+        stubs: {
+          OrderStatusBadge: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('payment.result.continuingAuthorization')
+    expect(routerReplace).not.toHaveBeenCalled()
   })
 })

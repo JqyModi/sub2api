@@ -292,6 +292,7 @@ import { planValiditySuffix as validitySuffixOf } from '@/components/payment/val
 import type { PaymentMethodOption } from '@/components/payment/PaymentMethodSelector.vue'
 import { buildPaymentErrorToastMessage, describePaymentScenarioError } from './paymentUx'
 import { hasWechatResumeQuery, parseWechatResumeRoute, stripWechatResumeQuery } from './paymentWechatResume'
+import { resolveDesktopAuthorizationRedirect } from '@/utils/authRedirect'
 
 const i18n = useI18n()
 const { t } = i18n
@@ -301,6 +302,7 @@ const authStore = useAuthStore()
 const paymentStore = usePaymentStore()
 const subscriptionStore = useSubscriptionStore()
 const appStore = useAppStore()
+const desktopAuthorizationRedirect = computed(() => resolveDesktopAuthorizationRedirect(route.query.redirect))
 
 const user = computed(() => authStore.user)
 const activeSubscriptions = computed(() => subscriptionStore.activeSubscriptions)
@@ -432,6 +434,9 @@ async function redirectToPaymentResult(state: PaymentRecoverySnapshot): Promise<
   }
   if (state.resumeToken) {
     query.resume_token = state.resumeToken
+  }
+  if (desktopAuthorizationRedirect.value) {
+    query.redirect = desktopAuthorizationRedirect.value
   }
   await router.push({
     path: '/payment/result',
@@ -781,6 +786,11 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       forceQRCode: !!(checkout.value.alipay_force_qrcode && normalizeVisibleMethod(requestType) === 'alipay'),
       mobilePrecreateDeepLink: checkout.value.alipay_mobile_precreate_deep_link === true,
     })
+    if (desktopAuthorizationRedirect.value && typeof window !== 'undefined') {
+      const returnURL = new URL('/payment/result', window.location.origin)
+      returnURL.searchParams.set('redirect', desktopAuthorizationRedirect.value)
+      payload.return_url = returnURL.toString()
+    }
     if (options.openid) {
       payload.openid = options.openid
     }
@@ -809,6 +819,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
           client_secret: result.client_secret,
           method: stripeMethod || undefined,
           resume_token: result.resume_token || undefined,
+          redirect: desktopAuthorizationRedirect.value || undefined,
         },
       }).href
       : ''
@@ -819,6 +830,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
           order_id: String(result.order_id),
           out_trade_no: result.out_trade_no || undefined,
           resume_token: result.resume_token || undefined,
+          redirect: desktopAuthorizationRedirect.value || undefined,
         },
       }).href
       : ''

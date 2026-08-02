@@ -87,7 +87,15 @@
           </div>
         </div>
         <!-- Actions -->
-        <div class="flex gap-3">
+        <div v-if="desktopAuthorizationRedirect" class="space-y-3">
+          <p v-if="isSuccess" class="text-center text-sm text-gray-500 dark:text-gray-400">
+            {{ t('payment.result.continuingAuthorization') }}
+          </p>
+          <button class="btn btn-primary w-full" :disabled="!isSuccess" @click="continueDesktopAuthorization">
+            {{ t('payment.result.continueAuthorization') }}
+          </button>
+        </div>
+        <div v-else class="flex gap-3">
           <button class="btn btn-secondary flex-1" @click="router.push('/purchase')">{{ t('payment.result.backToRecharge') }}</button>
           <button class="btn btn-primary flex-1" @click="router.push('/orders')">{{ t('payment.result.viewOrders') }}</button>
         </div>
@@ -97,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import OrderStatusBadge from '@/components/payment/OrderStatusBadge.vue'
@@ -112,12 +120,14 @@ import type { PublicOrderVerifyResult } from '@/api/payment'
 import type { OrderStatus, PaymentOrder } from '@/types/payment'
 import { formatPaymentAmount, normalizePaymentCurrency } from '@/components/payment/currency'
 import { normalizePaymentMethodForDisplay, paymentMethodI18nKey } from './paymentUx'
+import { resolveDesktopAuthorizationRedirect } from '@/utils/authRedirect'
 
 const i18n = useI18n()
 const { t } = i18n
 const route = useRoute()
 const router = useRouter()
 const paymentStore = usePaymentStore()
+const desktopAuthorizationRedirect = computed(() => resolveDesktopAuthorizationRedirect(route.query.redirect))
 
 type ResolvedOrder = PaymentOrder | PublicOrderVerifyResult
 
@@ -139,6 +149,7 @@ const STATUS_REFRESH_INTERVAL_MS = 2000
 const STATUS_REFRESH_MAX_ATTEMPTS = 15
 
 let statusRefreshTimer: ReturnType<typeof setTimeout> | null = null
+let authorizationRedirectTimer: ReturnType<typeof setTimeout> | null = null
 const refreshAttempts = ref(0)
 
 /** 充值金额 = pay_amount / (1 + fee_rate/100)，fee_rate=0 时等于 pay_amount */
@@ -226,6 +237,25 @@ function isSuccessStatus(status: string | null | undefined): boolean {
 function isPendingStatus(status: string | null | undefined): boolean {
   return PENDING_STATUSES.has(normalizeOrderStatus(status))
 }
+
+function continueDesktopAuthorization(): void {
+  if (!desktopAuthorizationRedirect.value || !isSuccess.value) return
+  if (authorizationRedirectTimer !== null) {
+    clearTimeout(authorizationRedirectTimer)
+    authorizationRedirectTimer = null
+  }
+  void router.replace(desktopAuthorizationRedirect.value)
+}
+
+watch([isSuccess, desktopAuthorizationRedirect], ([success, redirect]) => {
+  if (authorizationRedirectTimer !== null) {
+    clearTimeout(authorizationRedirectTimer)
+    authorizationRedirectTimer = null
+  }
+  if (success && redirect) {
+    authorizationRedirectTimer = setTimeout(continueDesktopAuthorization, 800)
+  }
+})
 
 function readRouteQueryString(key: string): string {
   const value = route.query[key]
@@ -441,5 +471,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearStatusRefreshTimer()
+  if (authorizationRedirectTimer !== null) {
+    clearTimeout(authorizationRedirectTimer)
+  }
 })
 </script>
