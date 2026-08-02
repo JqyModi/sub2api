@@ -188,7 +188,7 @@
       <p class="text-gray-500 dark:text-dark-400">
         {{ t('auth.dontHaveAccount') }}
         <router-link
-          to="/register"
+          :to="registerRoute"
           class="font-medium text-primary-600 transition-colors hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
         >
           {{ t('auth.signUp') }}
@@ -210,7 +210,7 @@
 
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AuthLayout } from '@/components/layout'
 import LinuxDoOAuthSection from '@/components/auth/LinuxDoOAuthSection.vue'
@@ -227,6 +227,7 @@ import { getPublicSettings, isTotp2FARequired, isWeChatWebOAuthEnabled } from '@
 import type { LoginAgreementDocument, TotpLoginResponse } from '@/types'
 import { extractI18nErrorMessage } from '@/utils/apiError'
 import { clearAllAffiliateReferralCodes } from '@/utils/oauthAffiliate'
+import { resolveAuthRedirect } from '@/utils/authRedirect'
 
 const { t } = useI18n()
 const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
@@ -234,8 +235,15 @@ const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
 // ==================== Router & Stores ====================
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+
+const postAuthRedirect = computed(() => resolveAuthRedirect(route.query.redirect))
+const registerRoute = computed(() => ({
+  path: '/register',
+  query: postAuthRedirect.value === '/dashboard' ? {} : { redirect: postAuthRedirect.value }
+}))
 
 // ==================== State ====================
 
@@ -516,8 +524,7 @@ async function handleLogin(): Promise<void> {
     appStore.showSuccess(t('auth.loginSuccess'))
 
     // Redirect to dashboard or intended route
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
-    await router.push(redirectTo)
+    await router.push(postAuthRedirect.value)
   } catch (error: unknown) {
     // Reset Turnstile on error
     if (turnstileRef.value) {
@@ -548,8 +555,7 @@ async function handlePasskeyLogin(): Promise<void> {
     await authStore.loginWithPasskey()
     clearAllAffiliateReferralCodes()
     appStore.showSuccess(t('auth.loginSuccess'))
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
-    await router.push(redirectTo)
+    await router.push(postAuthRedirect.value)
   } catch (error: unknown) {
     const fallback = error instanceof DOMException && error.name === 'NotAllowedError'
       ? t('auth.passkeyCancelled')
@@ -577,8 +583,7 @@ async function handle2FAVerify(code: string): Promise<void> {
     appStore.showSuccess(t('auth.loginSuccess'))
 
     // Redirect to dashboard or intended route
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
-    await router.push(redirectTo)
+    await router.push(postAuthRedirect.value)
   } catch (error: unknown) {
     const err = error as { message?: string; response?: { data?: { message?: string } } }
     const message = err.response?.data?.message || err.message || t('profile.totp.loginFailed')

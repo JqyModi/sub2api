@@ -308,7 +308,7 @@
       <p class="text-gray-500 dark:text-dark-400">
         {{ t('auth.alreadyHaveAccount') }}
         <router-link
-          to="/login"
+          :to="loginRoute"
           class="font-medium text-primary-600 transition-colors hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
         >
           {{ t('auth.signIn') }}
@@ -349,6 +349,7 @@ import {
   resolveAffiliateReferralCode
 } from '@/utils/oauthAffiliate'
 import type { LoginAgreementDocument } from '@/types'
+import { resolveAuthRedirect } from '@/utils/authRedirect'
 
 const { t, locale } = useI18n()
 const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
@@ -359,6 +360,12 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+
+const postRegistrationRedirect = computed(() => resolveAuthRedirect(route.query.redirect))
+const loginRoute = computed(() => ({
+  path: '/login',
+  query: postRegistrationRedirect.value === '/dashboard' ? {} : { redirect: postRegistrationRedirect.value }
+}))
 
 // ==================== State ====================
 
@@ -895,6 +902,7 @@ async function handleRegister(): Promise<void> {
           turnstile_token: turnstileToken.value,
           promo_code: formData.promo_code || undefined,
           invitation_code: formData.invitation_code || undefined,
+          pending_redirect: postRegistrationRedirect.value,
           ...(affCode ? { aff_code: affCode } : {})
         })
       )
@@ -918,8 +926,7 @@ async function handleRegister(): Promise<void> {
     // Show success toast
     appStore.showSuccess(t('auth.accountCreatedSuccess', { siteName: siteName.value }))
 
-    // Redirect to dashboard
-    await router.push('/dashboard')
+    await router.push(postRegistrationRedirect.value)
   } catch (error: unknown) {
     // Reset Turnstile on error
     if (turnstileRef.value) {
