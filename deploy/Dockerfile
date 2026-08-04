@@ -9,6 +9,7 @@
 ARG NODE_IMAGE=node:24-alpine
 ARG GOLANG_IMAGE=golang:1.26.5-alpine
 ARG ALPINE_IMAGE=alpine:3.20
+ARG RUNTIME_IMAGE=alpine:3.20
 ARG GOPROXY=https://goproxy.cn,direct
 ARG GOSUMDB=sum.golang.google.cn
 
@@ -25,9 +26,12 @@ WORKDIR /app/frontend
 # reliable on the 4 GB CI/VPS baseline.
 ENV NODE_OPTIONS=--max-old-space-size=${NODE_BUILD_HEAP_MB}
 
-# Install pnpm. Keep this pinned to the lockfile-compatible major version so
-# Docker builds remain reproducible when pnpm changes config validation rules.
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+# The local tarball keeps Docker builds independent from transient npm
+# registry failures. It is supplied only by the local verification workflow.
+COPY deploy/pnpm-9.15.9.tgz /tmp/pnpm-9.15.9.tgz
+RUN npm install --global /tmp/pnpm-9.15.9.tgz && \
+    rm -f /tmp/pnpm-9.15.9.tgz && \
+    pnpm --version
 
 # Install dependencies first (better caching)
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
@@ -51,14 +55,18 @@ FROM ${GOLANG_IMAGE} AS backend-builder
 ARG VERSION=
 ARG COMMIT=docker
 ARG DATE
+ARG INSTALL_GIT=true
 ARG GOPROXY
 ARG GOSUMDB
 
 ENV GOPROXY=${GOPROXY}
 ENV GOSUMDB=${GOSUMDB}
 
-# Install build dependencies
-RUN apk add --no-cache git ca-certificates tzdata
+# Install build dependencies. Git is only needed when the build derives its
+# version from the checkout; local verification can provide VERSION directly
+# and skip the extra package on unreliable networks.
+RUN apk add --no-cache ca-certificates tzdata && \
+    if [ "${INSTALL_GIT}" = "true" ]; then apk add --no-cache git; fi
 
 WORKDIR /app/backend
 
@@ -86,7 +94,12 @@ RUN VERSION_VALUE="${VERSION}" && \
 # -----------------------------------------------------------------------------
 # Stage 3: Final Runtime Image
 # -----------------------------------------------------------------------------
-FROM ${ALPINE_IMAGE}
+FROM ${RUNTIME_IMAGE}
+
+# The production image installs its small runtime dependency set. Local
+# verification can use an already-cached Alpine-compatible image when Docker
+# Hub is unavailable, without changing the production default.
+ARG INSTALL_RUNTIME_PACKAGES=true
 
 # Labels
 LABEL maintainer="Wei-Shaw <github.com/Wei-Shaw>"
@@ -94,12 +107,9 @@ LABEL description="Sub2API - AI API Gateway Platform"
 LABEL org.opencontainers.image.source="https://github.com/Wei-Shaw/sub2api"
 
 # Install runtime dependencies
-RUN apk add --no-cache \
-    ca-certificates \
-    tzdata \
-    curl \
-    su-exec \
-    && rm -rf /var/cache/apk/*
+RUN if [ "${INSTALL_RUNTIME_PACKAGES}" = "true" ]; then \
+        apk add --no-cache ca-certificates tzdata curl su-exec; \
+    fi
 
 # Create non-root user
 RUN addgroup -g 1000 sub2api && \
