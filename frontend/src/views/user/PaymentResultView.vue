@@ -328,6 +328,16 @@ async function resolveOrderFromOutTradeNo(outTradeNo: string): Promise<ResolvedO
   }
 }
 
+async function reconcileAuthenticatedOrder(outTradeNo: string): Promise<ResolvedOrder | null> {
+  if (!outTradeNo) return null
+  try {
+    const result = await paymentAPI.verifyOrder(outTradeNo)
+    return result.data
+  } catch (_err: unknown) {
+    return null
+  }
+}
+
 function clearStatusRefreshTimer(): void {
   if (statusRefreshTimer !== null) {
     clearTimeout(statusRefreshTimer)
@@ -410,10 +420,15 @@ onMounted(async () => {
   const shouldUsePublicOutTradeNo = outTradeNo !== '' && (hasLegacyFallbackContext || routeOrderId > 0 || orderId > 0)
 
   if (!order.value && orderId && (!resumeToken || routeOrderId > 0)) {
-    try {
-      setResolvedOrder(await paymentStore.pollOrderStatus(orderId))
-    } catch (_err: unknown) {
-      // Order lookup failed, will try legacy fallback below when possible.
+    const reconciledOrder = await reconcileAuthenticatedOrder(outTradeNo)
+    if (reconciledOrder) {
+      setResolvedOrder(reconciledOrder)
+    } else {
+      try {
+        setResolvedOrder(await paymentStore.pollOrderStatus(orderId))
+      } catch (_err: unknown) {
+        // Order lookup failed, will try legacy fallback below when possible.
+      }
     }
   }
 
@@ -442,6 +457,11 @@ onMounted(async () => {
       if (resolvedOrder) {
         return resolvedOrder
       }
+    }
+
+    const reconciledOrder = await reconcileAuthenticatedOrder(outTradeNo)
+    if (reconciledOrder) {
+      return reconciledOrder
     }
 
     if (orderId) {

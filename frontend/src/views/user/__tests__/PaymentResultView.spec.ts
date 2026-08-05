@@ -251,6 +251,7 @@ describe('PaymentResultView', () => {
       }),
     )
     resolveOrderPublicByResumeToken.mockRejectedValueOnce(new Error('resume failed'))
+    verifyOrder.mockRejectedValueOnce(new Error('upstream unavailable'))
     pollOrderStatus.mockResolvedValueOnce({
       ...orderFactory('PAID'),
       id: 77,
@@ -267,10 +268,96 @@ describe('PaymentResultView', () => {
     await flushPromises()
 
     expect(resolveOrderPublicByResumeToken).toHaveBeenCalledWith('resume-fail')
+    expect(verifyOrder).toHaveBeenCalledWith('sub2_20260420abcd1234')
     expect(pollOrderStatus).toHaveBeenCalledWith(77)
     expect(verifyOrderPublic).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('payment.result.success')
     expect(window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY)).toBeNull()
+  })
+
+  it('reconciles an order_id return with the authenticated out_trade_no before read-only polling', async () => {
+    routeState.query = {
+      order_id: '42',
+    }
+    window.localStorage.setItem(
+      PAYMENT_RECOVERY_STORAGE_KEY,
+      JSON.stringify(recoverySnapshotFactory('')),
+    )
+    verifyOrder.mockResolvedValueOnce({ data: orderFactory('COMPLETED') })
+
+    const wrapper = mount(PaymentResultView, {
+      global: {
+        stubs: {
+          OrderStatusBadge: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(verifyOrder).toHaveBeenCalledWith('sub2_20260420abcd1234')
+    expect(pollOrderStatus).not.toHaveBeenCalled()
+    expect(verifyOrderPublic).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('payment.result.success')
+  })
+
+  it('falls back to read-only order polling when authenticated reconciliation fails', async () => {
+    routeState.query = {
+      order_id: '42',
+    }
+    window.localStorage.setItem(
+      PAYMENT_RECOVERY_STORAGE_KEY,
+      JSON.stringify(recoverySnapshotFactory('')),
+    )
+    verifyOrder.mockRejectedValueOnce(new Error('upstream unavailable'))
+    pollOrderStatus.mockResolvedValueOnce(orderFactory('COMPLETED'))
+
+    const wrapper = mount(PaymentResultView, {
+      global: {
+        stubs: {
+          OrderStatusBadge: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(verifyOrder).toHaveBeenCalledWith('sub2_20260420abcd1234')
+    expect(pollOrderStatus).toHaveBeenCalledWith(42)
+    expect(verifyOrderPublic).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('payment.result.success')
+  })
+
+  it('keeps reconciling a pending order_id return until Stripe reports completion', async () => {
+    vi.useFakeTimers()
+    routeState.query = {
+      order_id: '42',
+    }
+    window.localStorage.setItem(
+      PAYMENT_RECOVERY_STORAGE_KEY,
+      JSON.stringify(recoverySnapshotFactory('')),
+    )
+    verifyOrder
+      .mockResolvedValueOnce({ data: orderFactory('PENDING') })
+      .mockResolvedValueOnce({ data: orderFactory('COMPLETED') })
+
+    const wrapper = mount(PaymentResultView, {
+      global: {
+        stubs: {
+          OrderStatusBadge: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    expect(wrapper.text()).toContain('payment.result.processing')
+
+    await vi.advanceTimersByTimeAsync(2000)
+    await flushPromises()
+
+    expect(verifyOrder).toHaveBeenCalledTimes(2)
+    expect(pollOrderStatus).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('payment.result.success')
   })
 
   it('falls back to public out_trade_no verification when resume_token recovery fails in legacy return flows', async () => {
