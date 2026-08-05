@@ -27,7 +27,7 @@ const (
 	checkPaidResultAlreadyPaid = "already_paid"
 	checkPaidResultCancelled   = "cancelled"
 
-	pendingWxpayReconcileLimit = 20
+	pendingPaymentReconcileLimit = 20
 )
 
 type checkPaidOptions struct {
@@ -319,10 +319,42 @@ func (s *PaymentService) ReconcilePendingWxpayOrders(ctx context.Context) (int, 
 			),
 		).
 		Order(dbent.Asc(paymentorder.FieldCreatedAt)).
-		Limit(pendingWxpayReconcileLimit).
+		Limit(pendingPaymentReconcileLimit).
 		All(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("query pending wxpay orders: %w", err)
+	}
+
+	recovered := 0
+	for _, order := range orders {
+		if s.reconcilePaid(ctx, order) == checkPaidResultAlreadyPaid {
+			recovered++
+		}
+	}
+	return recovered, nil
+}
+
+// ReconcilePendingPaymentOrders actively checks payment methods whose provider
+// supports reliable order lookup. This recovers paid orders when a webhook is
+// delayed or lost without waiting for the user to revisit the result page.
+func (s *PaymentService) ReconcilePendingPaymentOrders(ctx context.Context) (int, error) {
+	now := time.Now()
+	orders, err := s.entClient.PaymentOrder.Query().
+		Where(
+			paymentorder.StatusEQ(OrderStatusPending),
+			paymentorder.ExpiresAtGT(now),
+			paymentorder.Or(
+				paymentorder.PaymentTypeIn(payment.TypeWxpay, payment.TypeStripe, payment.TypeCard, payment.TypeLink),
+				paymentorder.PaymentTypeHasPrefix(payment.TypeWxpay+"_"),
+				paymentorder.PaymentTypeHasPrefix(payment.TypeStripe+"_"),
+				paymentorder.ProviderKeyIn(payment.TypeWxpay, payment.TypeStripe),
+			),
+		).
+		Order(dbent.Asc(paymentorder.FieldCreatedAt)).
+		Limit(pendingPaymentReconcileLimit).
+		All(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("query pending recoverable payment orders: %w", err)
 	}
 
 	recovered := 0

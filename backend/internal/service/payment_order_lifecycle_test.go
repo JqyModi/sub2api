@@ -669,6 +669,79 @@ func TestReconcilePendingWxpayOrdersBackfillsPaidOrder(t *testing.T) {
 	require.Len(t, redeemRepo.useCalls, 1)
 }
 
+func TestReconcilePendingPaymentOrdersChecksStripeAndSkipsUnsupportedProviders(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentOrderLifecycleTestClient(t)
+
+	user, err := client.User.Create().
+		SetEmail("stripe-reconcile@example.com").
+		SetPasswordHash("hash").
+		SetUsername("stripe-reconcile-user").
+		Save(ctx)
+	require.NoError(t, err)
+
+	expiresAt := time.Now().Add(time.Hour)
+	_, err = client.PaymentOrder.Create().
+		SetUserID(user.ID).
+		SetUserEmail(user.Email).
+		SetUserName(user.Username).
+		SetAmount(4).
+		SetPayAmount(4).
+		SetFeeRate(0).
+		SetRechargeCode("STRIPE-RECONCILE").
+		SetOutTradeNo("sub2_stripe_reconcile").
+		SetPaymentType(payment.TypeStripe).
+		SetPaymentTradeNo("pi_stripe_reconcile").
+		SetOrderType(payment.OrderTypeBalance).
+		SetStatus(OrderStatusPending).
+		SetExpiresAt(expiresAt).
+		SetClientIP("127.0.0.1").
+		SetSrcHost("api.example.com").
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = client.PaymentOrder.Create().
+		SetUserID(user.ID).
+		SetUserEmail(user.Email).
+		SetUserName(user.Username).
+		SetAmount(4).
+		SetPayAmount(4).
+		SetFeeRate(0).
+		SetRechargeCode("UNSUPPORTED-RECONCILE").
+		SetOutTradeNo("sub2_unsupported_reconcile").
+		SetPaymentType(payment.TypeEasyPay).
+		SetPaymentTradeNo("easy_trade_reconcile").
+		SetOrderType(payment.OrderTypeBalance).
+		SetStatus(OrderStatusPending).
+		SetExpiresAt(expiresAt).
+		SetClientIP("127.0.0.1").
+		SetSrcHost("api.example.com").
+		Save(ctx)
+	require.NoError(t, err)
+
+	registry := payment.NewRegistry()
+	stripeProvider := &paymentOrderLifecycleQueryProvider{
+		key: payment.TypeStripe,
+		resp: &payment.QueryOrderResponse{
+			TradeNo: "pi_stripe_reconcile",
+			Status:  payment.ProviderStatusPending,
+		},
+	}
+	registry.Register(stripeProvider)
+
+	svc := &PaymentService{
+		entClient:       client,
+		registry:        registry,
+		providersLoaded: true,
+	}
+
+	recovered, err := svc.ReconcilePendingPaymentOrders(ctx)
+	require.NoError(t, err)
+	require.Zero(t, recovered)
+	require.Equal(t, 1, stripeProvider.queryCalls)
+	require.Equal(t, "pi_stripe_reconcile", stripeProvider.lastQueryTradeNo)
+}
+
 func TestVerifyOrderByOutTradeNoUsesOutTradeNoWhenPaymentTradeNoAlreadyExistsForAlipay(t *testing.T) {
 	ctx := context.Background()
 	client := newPaymentOrderLifecycleTestClient(t)
