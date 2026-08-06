@@ -33,6 +33,7 @@ jobs:
           ADMIN_PASSWORD=desktop-auth-smoke-admin
           JWT_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           TOTP_ENCRYPTION_KEY=abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+          PAYMENT_RESUME_SIGNING_KEY=1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
           TZ=UTC
           EOF
           mkdir -p data postgres_data redis_data
@@ -104,6 +105,12 @@ jobs:
           token=$(api --data "{\"session_id\":\"$session_id\",\"code_verifier\":\"$verifier\"}" \
             http://127.0.0.1:8080/api/v1/desktop-auth/token)
           jq --exit-status '.data.access_token and .data.base_url and .data.default_model and .data.expires_at' <<<"$token" >/dev/null
+
+          keys=$(api --header "Authorization: Bearer $user_token" \
+            'http://127.0.0.1:8080/api/v1/keys?page=1&page_size=100')
+          jq --exit-status \
+            '.data.items[] | select(.name == "Codex Multi Launcher - CI") | .expires_at' \
+            <<<"$keys" >/dev/null
 
           repeat_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
