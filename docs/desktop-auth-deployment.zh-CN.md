@@ -28,6 +28,7 @@ POSTGRES_PASSWORD=<random-password>
 ADMIN_PASSWORD=<admin-password>
 JWT_SECRET=<openssl-rand-hex-32>
 TOTP_ENCRYPTION_KEY=<openssl-rand-hex-32>
+PAYMENT_RESUME_SIGNING_KEY=<openssl-rand-hex-32>
 SERVER_MODE=release
 BIND_HOST=127.0.0.1
 ```
@@ -69,6 +70,10 @@ CODEX_PROFILE_MANAGER_SUBSCRIPTION_SERVICE_URL=https://api.example.com npm run d
 5. 重启桌面 App 后再次打开该 Profile。
 
 完成前不要把订阅服务入口写入正式桌面 Release 默认配置。
+
+准备开放真实付费前，还必须逐项完成
+[生产上线检查清单](./desktop-auth-production-checklist.zh-CN.md)。其中包括 Stripe Live
+Webhook、支付补单、订阅失效、备份恢复和紧急下线验证。
 
 ## 更新与回滚
 

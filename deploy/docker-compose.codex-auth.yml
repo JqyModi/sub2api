@@ -11,3 +11,5 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile
     image: ${CODEX_AUTH_IMAGE:-jqymodi/sub2api-codex-auth:local}
+    environment:
+      - PAYMENT_RESUME_SIGNING_KEY=${PAYMENT_RESUME_SIGNING_KEY:-}

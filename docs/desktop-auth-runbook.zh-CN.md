@@ -4,7 +4,7 @@
 >
 > 对应桌面端分支：`jqy/sub2api-desktop-auth`
 >
-> 状态：本地 Docker、注册、真实订单、模拟签名支付回调、浏览器授权、桌面端授权和 Profile 创建闭环已验证；生产商户、上游账号和公网运维尚未上线。
+> 状态：本地 Docker、注册、真实 Stripe 小额支付、签名 Webhook、主动查单补单、浏览器授权、桌面端授权和 Profile 创建闭环已验证；公网域名、上游账号和生产运维尚未上线。
 
 本手册记录 Codex Multi Launcher（以下简称“桌面端”）与本 fork 的 Sub2API 之间的订阅授权实现、部署方式、验收方法和边界。它是当前实现的运行记录，不包含管理员密码、支付凭据、上游账号密钥或任何测试用户凭据。
 
@@ -43,6 +43,7 @@
 - 购买页携带有效桌面授权 `redirect` 时，Stripe/易支付等跳转支付会继续使用当前标签页，不调用 `window.open`；普通独立充值仍保留桌面弹窗方式。
 - 授权路径只允许站内 `/desktop/authorize?session=...`。登录、注册、购买、Stripe/Airwallex/易支付结果页都会保留该路径，支付履约后自动返回并继续授权；外部或畸形回跳地址会被拒绝。
 - 当前会选择用户的第一条有效订阅并为其分组创建一个 Key；尚没有“选择套餐/设备列表/设备撤销”专项界面。
+- 设备 Key 的精确到期时间与授权时的订阅到期时间一致；网关还会在每次请求时校验订阅状态，退款撤销、暂停或提前到期后会立即拒绝访问。
 - 授权 URL 和返回的 `base_url` 必须与桌面端配置的订阅服务同源。公网服务应使用 HTTPS；仅 `localhost`、`127.0.0.1`、`::1` 本地开发地址允许 HTTP。
 
 相关实现：
@@ -101,6 +102,7 @@ ADMIN_EMAIL=<administrator-email>
 ADMIN_PASSWORD=<strong-admin-password>
 JWT_SECRET=<openssl-rand-hex-32>
 TOTP_ENCRYPTION_KEY=<openssl-rand-hex-32>
+PAYMENT_RESUME_SIGNING_KEY=<openssl-rand-hex-32>
 ```
 
 可用以下命令生成两个固定密钥：
@@ -109,7 +111,7 @@ TOTP_ENCRYPTION_KEY=<openssl-rand-hex-32>
 openssl rand -hex 32
 ```
 
-`JWT_SECRET` 与 `TOTP_ENCRYPTION_KEY` 不能在重启或升级时随意更换，否则现有登录会话或已配置的 TOTP 会失效。
+`JWT_SECRET`、`TOTP_ENCRYPTION_KEY` 与 `PAYMENT_RESUME_SIGNING_KEY` 不能在重启或升级时随意更换，否则现有登录会话、TOTP 或尚未完成的支付恢复链接会失效。
 
 ### 4.3 构建并启动
 
@@ -222,6 +224,7 @@ docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -
 | --- | --- |
 | 授权地址不可信 | 桌面端服务地址、授权 URL 是否同源、`X-Forwarded-Proto`、本地 HTTP/公网 HTTPS 规则 |
 | 认证页显示无有效订阅 | 用户登录身份、有效订阅、订阅分组、支付 Webhook 履约 |
+| Stripe 已扣款但订单处理中 | Stripe Event 投递状态、Webhook Secret、`payment_intent.succeeded`；后台每 60 秒还会主动查询有效待支付订单 |
 | 授权后桌面端一直等待 | `sub2api` 日志、Redis 健康、支付结果是否保留 `redirect`、会话是否超过 30 分钟 |
 | Profile 创建失败 | 桌面端主进程日志、服务端 `/v1/models` 和 `/v1/responses`、分组上游路由 |
 | 重启后异常 | `.env` 中 JWT/TOTP 密钥是否被替换、PostgreSQL 数据目录和磁盘空间 |
@@ -230,10 +233,11 @@ docker compose -f docker-compose.local.yml -f docker-compose.codex-auth.yml up -
 
 本地授权闭环已通过，但以下不是“已上线能力”：
 
-- 本地已验证 EasyPay MD5 请求签名、错误回调拒绝、正确 Webhook 验签和订阅履约；真实商户通道、退款和风控策略仍需按运营方案配置和验证。
+- 本地已验证 EasyPay MD5 回调；Stripe 已完成 Live 小额扣款、合法签名 Webhook 补投和订阅履约验证。公网正式 Endpoint、退款和风控策略仍需在生产域名上复验。
+- Stripe Webhook 丢失时，支付结果页会使用登录态或签名恢复令牌主动查单；后台每 60 秒也会批量查询仍在有效期内的 Stripe/Card/Link 订单并幂等履约。
 - 上游账号池、Codex 长上下文、SSE、工具调用、配额和并发应基于实际供应商做压测。
-- 设备模型、设备数量限制、可视化设备撤销和 Key 自动轮换尚未单独实现；当前可通过既有 Key 管理能力人工处理。
-- 订阅变更、过期或退款后已签发 Key 的即时限制策略需要结合实际网关/分组规则进行生产验收。
+- 设备数量限制、可视化设备撤销和 Key 自动轮换尚未单独实现；当前可通过既有 Key 管理能力人工处理。设备 Key 已绑定订阅到期时间，网关请求还会实时校验有效订阅。
 - 公网域名、TLS、备份恢复演练、监控告警、服务条款、隐私说明及上游转售合规必须在开放付费前完成。
 
 相关的早期部署说明见 [desktop-auth-deployment.zh-CN.md](./desktop-auth-deployment.zh-CN.md)，本地验证步骤见 [desktop-auth-local-verification.zh-CN.md](./desktop-auth-local-verification.zh-CN.md)。
+生产开放前按 [生产上线检查清单](./desktop-auth-production-checklist.zh-CN.md) 逐项签字验收。
