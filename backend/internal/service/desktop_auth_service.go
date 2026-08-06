@@ -169,9 +169,11 @@ func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID strin
 
 	subscription := subscriptions[0]
 	groupID := subscription.GroupID
+	subscriptionExpiresAt := subscription.ExpiresAt.UTC()
 	key, err := s.apiKeyIssuer.Create(ctx, userID, CreateAPIKeyRequest{
-		Name:    desktopAuthKeyName(session.DeviceName),
-		GroupID: &groupID,
+		Name:      desktopAuthKeyName(session.DeviceName),
+		GroupID:   &groupID,
+		ExpiresAt: &subscriptionExpiresAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create desktop API key: %w", err)
@@ -183,7 +185,6 @@ func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID strin
 	session.BaseURL = strings.TrimRight(baseURL, "/") + "/v1"
 	session.DefaultModel = desktopAuthDefaultModel
 	session.ProviderName = "Sub2API subscription"
-	subscriptionExpiresAt := subscription.ExpiresAt.UTC()
 	session.SubscriptionExpiresAt = &subscriptionExpiresAt
 	if err := s.save(ctx, session); err != nil {
 		return nil, err

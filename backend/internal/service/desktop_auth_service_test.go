@@ -74,6 +74,8 @@ func TestDesktopAuthApprovalCreatesUserDeviceKey(t *testing.T) {
 	require.Equal(t, int64(42), issuer.userID)
 	require.Equal(t, int64(12), *issuer.request.GroupID)
 	require.Equal(t, "Codex Multi Launcher - MacBook", issuer.request.Name)
+	require.NotNil(t, issuer.request.ExpiresAt)
+	require.WithinDuration(t, reader.subscriptions[0].ExpiresAt, *issuer.request.ExpiresAt, time.Second)
 
 	consumed, _, err := svc.PollToken(context.Background(), created.SessionID, verifier)
 	require.NoError(t, err)
