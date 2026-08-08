@@ -114,6 +114,29 @@ func TestValidateProviderRequest(t *testing.T) {
 	}
 }
 
+func TestValidateProviderConfigRejectsStripeWechatPayWithUnsupportedCurrency(t *testing.T) {
+	t.Parallel()
+
+	config := map[string]string{
+		"secretKey": "sk_test_placeholder",
+		"currency":  "USD",
+	}
+	err := (&PaymentConfigService{}).validateProviderConfig(payment.TypeStripe, config, "card,wxpay")
+	require.Error(t, err)
+	appErr := infraerrors.FromError(err)
+	require.Equal(t, "STRIPE_WECHAT_PAY_CURRENCY_UNSUPPORTED", appErr.Reason)
+}
+
+func TestValidateProviderConfigAllowsStripeWechatPayWithCNY(t *testing.T) {
+	t.Parallel()
+
+	config := map[string]string{
+		"secretKey": "sk_test_placeholder",
+		"currency":  "CNY",
+	}
+	require.NoError(t, (&PaymentConfigService{}).validateProviderConfig(payment.TypeStripe, config, "card,wxpay"))
+}
+
 func TestValidateEasyPayCustomMethods(t *testing.T) {
 	t.Parallel()
 

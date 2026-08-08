@@ -24,9 +24,25 @@ import (
 //
 // Only validates enabled instances — a disabled instance may be a half-filled
 // draft the admin will complete later.
-func (s *PaymentConfigService) validateProviderConfig(providerKey string, config map[string]string) error {
+func (s *PaymentConfigService) validateProviderConfig(providerKey string, config map[string]string, supportedTypes string) error {
 	_, err := provider.CreateProvider(providerKey, "_validate_", config)
-	return err
+	if err != nil {
+		return err
+	}
+	if providerKey != payment.TypeStripe || !InstanceSupportsType(supportedTypes, payment.TypeWxpay) {
+		return nil
+	}
+	currency, err := payment.NormalizePaymentCurrency(config["currency"])
+	if err != nil {
+		return fmt.Errorf("stripe config currency: %w", err)
+	}
+	if currency != "CNY" && currency != "HKD" {
+		return infraerrors.BadRequest(
+			"STRIPE_WECHAT_PAY_CURRENCY_UNSUPPORTED",
+			"Stripe WeChat Pay only supports CNY or HKD; change the provider currency or remove WeChat Pay",
+		)
+	}
+	return nil
 }
 
 // --- Provider Instance CRUD ---
@@ -195,7 +211,7 @@ func (s *PaymentConfigService) CreateProviderInstance(ctx context.Context, req C
 		return nil, err
 	}
 	if req.Enabled {
-		if err := s.validateProviderConfig(req.ProviderKey, req.Config); err != nil {
+		if err := s.validateProviderConfig(req.ProviderKey, req.Config, typesStr); err != nil {
 			return nil, err
 		}
 	}
@@ -366,7 +382,7 @@ func (s *PaymentConfigService) UpdateProviderInstance(ctx context.Context, id in
 		finalEnabled = *req.Enabled
 	}
 	if finalEnabled {
-		if err := s.validateProviderConfig(current.ProviderKey, configToValidate); err != nil {
+		if err := s.validateProviderConfig(current.ProviderKey, configToValidate, nextSupportedTypes); err != nil {
 			return nil, err
 		}
 	}
