@@ -808,7 +808,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
     const visibleMethod = normalizeVisibleMethod(requestType) || requestType
     // When user clicks the dedicated Stripe button, leave method blank so the
     // landing page renders Stripe's full Payment Element (card/link/alipay/wxpay).
-    const stripeMethod = visibleMethod === 'stripe'
+    const stripeMethod = visibleMethod === 'stripe' || visibleMethod === 'stripe_card'
       ? ''
       : visibleMethod === 'wxpay' ? 'wechat_pay' : 'alipay'
     const stripeRouteUrl = result.client_secret && visibleMethod !== 'airwallex'
@@ -817,6 +817,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
         query: {
           order_id: String(result.order_id),
           client_secret: result.client_secret,
+          publishable_key: result.publishable_key || undefined,
           method: stripeMethod || undefined,
           resume_token: result.resume_token || undefined,
           redirect: desktopAuthorizationRedirect.value || undefined,
@@ -1031,6 +1032,7 @@ async function attemptMobileQrFallback(err: unknown, context: MobileQrFallbackCo
         query: {
           order_id: String(result.order_id),
           client_secret: result.client_secret,
+          publishable_key: result.publishable_key || undefined,
           method: stripeMethod,
           resume_token: result.resume_token || undefined,
         },

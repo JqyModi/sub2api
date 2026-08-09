@@ -296,7 +296,7 @@ func buildPaymentOrderProviderSnapshot(sel *payment.InstanceSelection, req Creat
 			snapshot["merchant_id"] = merchantID
 		}
 	}
-	if providerKey == payment.TypeStripe {
+	if providerKey == payment.TypeStripe || providerKey == payment.TypeStripeCard {
 		snapshot["currency"] = paymentProviderConfigCurrency(providerKey, sel.Config)
 	}
 	if providerKey == payment.TypeAirwallex {
@@ -741,7 +741,8 @@ func buildCreateOrderResponse(order *dbent.PaymentOrder, req CreateOrderRequest,
 		OutTradeNo:   order.OutTradeNo,
 		PayURL:       pr.PayURL,
 		QRCode:       pr.QRCode,
-		ClientSecret: pr.ClientSecret,
+		ClientSecret:   pr.ClientSecret,
+		PublishableKey: stripePublishableKeyForSelection(sel),
 		IntentID:     pr.IntentID,
 		Currency:     pr.Currency,
 		CountryCode:  pr.CountryCode,
@@ -752,6 +753,13 @@ func buildCreateOrderResponse(order *dbent.PaymentOrder, req CreateOrderRequest,
 		ExpiresAt:    order.ExpiresAt,
 		PaymentMode:  sel.PaymentMode,
 	}
+}
+
+func stripePublishableKeyForSelection(sel *payment.InstanceSelection) string {
+	if sel == nil || (sel.ProviderKey != payment.TypeStripe && sel.ProviderKey != payment.TypeStripeCard) {
+		return ""
+	}
+	return strings.TrimSpace(sel.Config[payment.ConfigKeyPublishableKey])
 }
 
 func buildWeChatPaymentOAuthStartURL(req CreateOrderRequest, scope string) (string, error) {

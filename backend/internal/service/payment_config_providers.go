@@ -29,6 +29,25 @@ func (s *PaymentConfigService) validateProviderConfig(providerKey string, config
 	if err != nil {
 		return err
 	}
+	if providerKey == payment.TypeStripeCard {
+		currency, err := payment.NormalizePaymentCurrency(config["currency"])
+		if err != nil {
+			return fmt.Errorf("stripe card config currency: %w", err)
+		}
+		if currency != "USD" {
+			return infraerrors.BadRequest(
+				"STRIPE_CARD_CURRENCY_UNSUPPORTED",
+				"Stripe international card route only supports USD",
+			)
+		}
+		if strings.TrimSpace(supportedTypes) != "" && !InstanceSupportsType(supportedTypes, payment.TypeCard) {
+			return infraerrors.BadRequest(
+				"STRIPE_CARD_METHOD_REQUIRED",
+				"Stripe international card route must enable card",
+			)
+		}
+		return nil
+	}
 	if providerKey != payment.TypeStripe || !InstanceSupportsType(supportedTypes, payment.TypeWxpay) {
 		return nil
 	}
@@ -131,6 +150,7 @@ var providerSensitiveConfigFields = map[string]map[string]struct{}{
 	payment.TypeAlipay:    {"privatekey": {}, "publickey": {}, "alipaypublickey": {}},
 	payment.TypeWxpay:     {"privatekey": {}, "apiv3key": {}, "publickey": {}},
 	payment.TypeStripe:    {"secretkey": {}, "webhooksecret": {}},
+	payment.TypeStripeCard: {"secretkey": {}, "webhooksecret": {}},
 	payment.TypeAirwallex: {"apikey": {}, "webhooksecret": {}},
 }
 
@@ -143,6 +163,7 @@ var providerPendingOrderProtectedConfigFields = map[string]map[string]struct{}{
 	payment.TypeAlipay:    {"privatekey": {}, "publickey": {}, "alipaypublickey": {}, "appid": {}},
 	payment.TypeWxpay:     {"privatekey": {}, "apiv3key": {}, "publickey": {}, "appid": {}, "mpappid": {}, "mchid": {}, "publickeyid": {}, "certserial": {}},
 	payment.TypeStripe:    {"secretkey": {}, "webhooksecret": {}, "currency": {}},
+	payment.TypeStripeCard: {"secretkey": {}, "webhooksecret": {}, "currency": {}},
 	payment.TypeAirwallex: {"clientid": {}, "apikey": {}, "webhooksecret": {}, "apibase": {}, "accountid": {}, "currency": {}},
 }
 
@@ -194,7 +215,7 @@ func (s *PaymentConfigService) countPendingOrdersByPlan(ctx context.Context, pla
 }
 
 var validProviderKeys = map[string]bool{
-	payment.TypeEasyPay: true, payment.TypeAlipay: true, payment.TypeWxpay: true, payment.TypeStripe: true, payment.TypeAirwallex: true,
+	payment.TypeEasyPay: true, payment.TypeAlipay: true, payment.TypeWxpay: true, payment.TypeStripe: true, payment.TypeStripeCard: true, payment.TypeAirwallex: true,
 }
 
 func (s *PaymentConfigService) CreateProviderInstance(ctx context.Context, req CreateProviderInstanceRequest) (*dbent.PaymentProviderInstance, error) {

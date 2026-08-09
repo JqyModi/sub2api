@@ -40,7 +40,8 @@ export const PROVIDER_SUPPORTED_TYPES: Record<string, string[]> = {
   easypay: ['alipay', 'wxpay'],
   alipay: ['alipay'],
   wxpay: ['wxpay'],
-  stripe: ['card', 'alipay', 'wxpay', 'link'],
+	stripe: ['card', 'alipay', 'wxpay', 'link'],
+	stripe_card: ['card'],
   airwallex: ['airwallex'],
 }
 
@@ -48,7 +49,7 @@ export const PROVIDER_SUPPORTED_TYPES: Record<string, string[]> = {
 export const EASYPAY_PAYMENT_MODES = ['qrcode', 'popup'] as const
 
 /** Fixed display order for user-facing payment methods */
-export const METHOD_ORDER = ['alipay', 'alipay_direct', 'wxpay', 'wxpay_direct', 'stripe', 'airwallex'] as const
+export const METHOD_ORDER = ['alipay', 'alipay_direct', 'wxpay', 'wxpay_direct', 'stripe_card', 'stripe', 'airwallex'] as const
 
 export function isBuiltInAlipayMethod(type: string): boolean {
   return type === 'alipay' || type === 'alipay_direct'
@@ -108,7 +109,8 @@ export const WEBHOOK_PATHS: Record<string, string> = {
   easypay: '/api/v1/payment/webhook/easypay',
   alipay: '/api/v1/payment/webhook/alipay',
   wxpay: '/api/v1/payment/webhook/wxpay',
-  stripe: '/api/v1/payment/webhook/stripe',
+	stripe: '/api/v1/payment/webhook/stripe',
+	stripe_card: '/api/v1/payment/webhook/stripe',
   airwallex: '/api/v1/payment/webhook/airwallex',
 }
 
@@ -146,12 +148,18 @@ export const PROVIDER_CONFIG_FIELDS: Record<string, ConfigFieldDef[]> = {
     { key: 'publicKey', label: '', sensitive: true },
     { key: 'publicKeyId', label: '', sensitive: false },
   ],
-  stripe: [
+	stripe: [
     { key: 'secretKey', label: '', sensitive: true },
     { key: 'publishableKey', label: '', sensitive: false },
     { key: 'webhookSecret', label: '', sensitive: true },
     { key: 'currency', label: '', sensitive: false, defaultValue: 'CNY', hintKey: 'admin.settings.payment.field_paymentCurrencyHint', options: PAYMENT_CURRENCY_OPTIONS },
-  ],
+	],
+	stripe_card: [
+		{ key: 'secretKey', label: '', sensitive: true },
+		{ key: 'publishableKey', label: '', sensitive: false },
+		{ key: 'webhookSecret', label: '', sensitive: true },
+		{ key: 'currency', label: '', sensitive: false, defaultValue: 'USD', hintKey: 'admin.settings.payment.field_stripeCardCurrencyHint', options: [{ value: 'USD', label: 'USD' }] },
+	],
   airwallex: [
     { key: 'clientId', label: '', sensitive: false },
     { key: 'apiKey', label: '', sensitive: true },

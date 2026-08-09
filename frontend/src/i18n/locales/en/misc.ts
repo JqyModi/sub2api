@@ -301,6 +301,7 @@ export default {
       alipay: 'Alipay',
       wxpay: 'WeChat Pay',
       stripe: 'Stripe',
+      stripe_card: 'International Card',
       airwallex: 'Airwallex',
       card: 'Card',
       link: 'Link',

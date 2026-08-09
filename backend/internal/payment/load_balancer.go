@@ -138,10 +138,10 @@ func (lb *DefaultLoadBalancer) queryEnabledInstances(
 	var matched []*dbent.PaymentProviderInstance
 	expectedWxpayJSAPIAppID := wxpayJSAPIAppIDFromContext(ctx)
 	for _, inst := range instances {
-		// Stripe: match by provider_key because supported_types lists sub-types (card,link,alipay,wxpay),
-		// not "stripe" itself. The checkout page aggregates all sub-types under "stripe".
-		if paymentType == TypeStripe {
-			if inst.ProviderKey == TypeStripe {
+		// Legacy Stripe and the dedicated card route are selected by their own
+		// provider keys. This prevents a USD card order from landing on CNY.
+		if paymentType == TypeStripe || paymentType == TypeStripeCard {
+			if inst.ProviderKey == paymentType {
 				matched = append(matched, inst)
 			}
 		} else if InstanceSupportsType(inst.SupportedTypes, paymentType) {
@@ -256,8 +256,10 @@ func getInstanceChannelLimits(inst *dbent.PaymentProviderInstance, paymentType P
 	}
 	// For Stripe, limits are stored under the provider key "stripe".
 	lookupKey := paymentType
-	if inst.ProviderKey == "stripe" {
-		lookupKey = "stripe"
+	if inst.ProviderKey == TypeStripe {
+		lookupKey = TypeStripe
+	} else if inst.ProviderKey == TypeStripeCard {
+		lookupKey = TypeStripeCard
 	}
 	if cl, ok := limits[lookupKey]; ok {
 		return cl

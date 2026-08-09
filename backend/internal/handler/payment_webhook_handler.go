@@ -164,9 +164,26 @@ func extractOutTradeNo(rawBody, providerKey string) string {
 		if err := json.Unmarshal([]byte(rawBody), &payload); err == nil {
 			return strings.TrimSpace(payload.Data.Object.MerchantOrderID)
 		}
+	case payment.TypeStripe:
+		// Stripe uses the same webhook endpoint for all Stripe instances. Read
+		// the order ID from PaymentIntent metadata so a CNY and a USD instance
+		// can be resolved from the pinned order before signature verification.
+		var payload struct {
+			Data struct {
+				Object struct {
+					Metadata map[string]string `json:"metadata"`
+				}
+			} `json:"data"`
+		}
+		if err := json.Unmarshal([]byte(rawBody), &payload); err == nil {
+			if orderID := strings.TrimSpace(payload.Data.Object.Metadata["orderId"]); orderID != "" {
+				return orderID
+			}
+			return strings.TrimSpace(payload.Data.Object.Metadata["order_id"])
+		}
 	}
-	// For other providers (Stripe, Alipay direct, WxPay direct), the registry
-	// typically has only one instance, so no instance lookup is needed.
+	// For Alipay direct and WxPay direct, the registry typically has only one
+	// instance, so no instance lookup is needed.
 	return ""
 }
 
@@ -208,7 +225,7 @@ func writeSuccessResponse(c *gin.Context, providerKey string) {
 	switch providerKey {
 	case payment.TypeWxpay:
 		c.JSON(http.StatusOK, wxpaySuccessResponse{Code: wxpaySuccessCode, Message: wxpaySuccessMessage})
-	case payment.TypeStripe, payment.TypeAirwallex:
+	case payment.TypeStripe, payment.TypeStripeCard, payment.TypeAirwallex:
 		c.String(http.StatusOK, "")
 	default:
 		c.String(http.StatusOK, "success")

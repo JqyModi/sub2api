@@ -58,6 +58,15 @@ describe('PROVIDER_CONFIG_FIELDS.stripe', () => {
   })
 })
 
+describe('PROVIDER_CONFIG_FIELDS.stripe_card', () => {
+  it('locks the dedicated international card route to USD', () => {
+    const currency = findField('stripe_card', 'currency')
+
+    expect(currency?.defaultValue).toBe('USD')
+    expect(currency?.options).toEqual([{ value: 'USD', label: 'USD' }])
+  })
+})
+
 describe('EasyPay custom methods config', () => {
   it('parses customMethods from the JSON string stored in provider config', () => {
     expect(parseEasyPayCustomMethods(

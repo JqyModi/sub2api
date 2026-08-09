@@ -238,6 +238,9 @@ func TestIsSensitiveProviderConfigField(t *testing.T) {
 		{"stripe", "publishableKey", false},
 		{"stripe", "currency", false},
 		{"stripe", "appId", false},
+		{"stripe_card", "secretKey", true},
+		{"stripe_card", "webhookSecret", true},
+		{"stripe_card", "publishableKey", false},
 
 		// Alipay
 		{"alipay", "privateKey", true},
@@ -280,6 +283,26 @@ func TestIsSensitiveProviderConfigField(t *testing.T) {
 			assert.Equal(t, tc.wantSen, got, "isSensitiveProviderConfigField(%q, %q)", tc.providerKey, tc.field)
 		})
 	}
+}
+
+func TestValidateStripeCardProviderConfig(t *testing.T) {
+	t.Parallel()
+
+	config := map[string]string{
+		"secretKey": "sk_live_test",
+		"currency":  "USD",
+	}
+	require.NoError(t, (&PaymentConfigService{}).validateProviderConfig(payment.TypeStripeCard, config, payment.TypeCard))
+
+	config["currency"] = "CNY"
+	err := (&PaymentConfigService{}).validateProviderConfig(payment.TypeStripeCard, config, payment.TypeCard)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "only supports USD")
+
+	config["currency"] = "USD"
+	err = (&PaymentConfigService{}).validateProviderConfig(payment.TypeStripeCard, config, payment.TypeLink)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must enable card")
 }
 
 func TestJoinTypes(t *testing.T) {
@@ -743,6 +766,8 @@ func providerPendingOrderPaymentType(providerKey string) string {
 		return payment.TypeAirwallex
 	case payment.TypeStripe:
 		return payment.TypeStripe
+	case payment.TypeStripeCard:
+		return payment.TypeStripeCard
 	default:
 		return payment.TypeAlipay
 	}

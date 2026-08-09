@@ -152,6 +152,9 @@
         <p v-if="paymentGuide" class="mb-3 text-xs text-gray-500 dark:text-gray-400">
           {{ paymentGuide.summary }}
         </p>
+        <p v-if="form.provider_key === 'stripe'" class="mb-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+          {{ t('admin.settings.payment.stripeCnyRouteHint') }}
+        </p>
         <div class="space-y-3">
           <div v-for="field in resolvedFields" :key="field.key">
             <label class="input-label">
@@ -237,7 +240,7 @@
           <code class="mt-1 block break-all rounded bg-blue-100 px-2 py-1 text-xs text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
             {{ providerWebhookUrl }}
           </code>
-          <p v-if="form.provider_key === 'stripe'" class="mt-2 text-xs leading-relaxed text-blue-700 dark:text-blue-300">
+          <p v-if="form.provider_key === 'stripe' || form.provider_key === 'stripe_card'" class="mt-2 text-xs leading-relaxed text-blue-700 dark:text-blue-300">
             {{ t('admin.settings.payment.stripeWebhookApiVersionHint', { version: STRIPE_SDK_API_VERSION }) }}
           </p>
         </div>
@@ -417,6 +420,7 @@ const defaultBaseUrl = typeof window !== 'undefined' ? window.location.origin : 
 
 const providerWebhookHintMap: Record<string, string> = {
   stripe: 'admin.settings.payment.stripeWebhookHint',
+  stripe_card: 'admin.settings.payment.stripeWebhookHint',
   airwallex: 'admin.settings.payment.airwallexWebhookHint',
 }
 
@@ -545,6 +549,9 @@ const limitableTypes = computed(() => {
   // Stripe: single "stripe" entry (one set of shared limits)
   if (form.provider_key === 'stripe') {
     return [{ value: 'stripe', label: 'Stripe' }]
+  }
+  if (form.provider_key === 'stripe_card') {
+    return [{ value: 'stripe_card', label: t('payment.methods.stripe_card') }]
   }
   const selected = form.supported_types.filter(t => t !== 'easypay')
   return selected.map(v => {

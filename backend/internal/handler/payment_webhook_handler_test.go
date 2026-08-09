@@ -48,6 +48,13 @@ func TestWriteSuccessResponse(t *testing.T) {
 			wantBody:        "",
 		},
 		{
+			name:            "stripe card returns empty 200",
+			providerKey:     payment.TypeStripeCard,
+			wantCode:        http.StatusOK,
+			wantContentType: "text/plain",
+			wantBody:        "",
+		},
+		{
 			name:            "airwallex returns empty 200",
 			providerKey:     payment.TypeAirwallex,
 			wantCode:        http.StatusOK,
@@ -177,6 +184,12 @@ func TestExtractOutTradeNo(t *testing.T) {
 			providerKey: payment.TypeAirwallex,
 			rawBody:     `{"name":"payment_intent.succeeded","data":{"object":{"merchant_order_id":"sub2_awx_123"}}}`,
 			want:        "sub2_awx_123",
+		},
+		{
+			name:        "stripe payment intent metadata",
+			providerKey: payment.TypeStripe,
+			rawBody:     `{"data":{"object":{"metadata":{"orderId":"sub2_stripe_789"}}}}`,
+			want:        "sub2_stripe_789",
 		},
 	}
 

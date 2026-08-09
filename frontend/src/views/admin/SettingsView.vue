@@ -11303,7 +11303,8 @@ const allPaymentTypes = computed(() => [
   { value: "easypay", label: t("payment.methods.easypay") },
   { value: "alipay", label: t("payment.methods.alipay") },
   { value: "wxpay", label: t("payment.methods.wxpay") },
-  { value: "stripe", label: t("payment.methods.stripe") },
+	  { value: "stripe", label: t("payment.methods.stripe") },
+	  { value: "stripe_card", label: t("payment.methods.stripe_card") },
   { value: "airwallex", label: t("payment.methods.airwallex") },
 ]);
 
@@ -11360,7 +11361,8 @@ const providerKeyOptions = computed(() => [
   { value: "easypay", label: t("admin.settings.payment.providerEasypay") },
   { value: "alipay", label: t("admin.settings.payment.providerAlipay") },
   { value: "wxpay", label: t("admin.settings.payment.providerWxpay") },
-  { value: "stripe", label: t("admin.settings.payment.providerStripe") },
+	  { value: "stripe", label: t("admin.settings.payment.providerStripe") },
+	  { value: "stripe_card", label: t("admin.settings.payment.providerStripeCard") },
   { value: "airwallex", label: t("admin.settings.payment.providerAirwallex") },
 ]);
 

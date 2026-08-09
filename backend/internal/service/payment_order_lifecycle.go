@@ -344,10 +344,10 @@ func (s *PaymentService) ReconcilePendingPaymentOrders(ctx context.Context) (int
 			paymentorder.StatusEQ(OrderStatusPending),
 			paymentorder.ExpiresAtGT(now),
 			paymentorder.Or(
-				paymentorder.PaymentTypeIn(payment.TypeWxpay, payment.TypeStripe, payment.TypeCard, payment.TypeLink),
+				paymentorder.PaymentTypeIn(payment.TypeWxpay, payment.TypeStripe, payment.TypeStripeCard, payment.TypeCard, payment.TypeLink),
 				paymentorder.PaymentTypeHasPrefix(payment.TypeWxpay+"_"),
 				paymentorder.PaymentTypeHasPrefix(payment.TypeStripe+"_"),
-				paymentorder.ProviderKeyIn(payment.TypeWxpay, payment.TypeStripe),
+				paymentorder.ProviderKeyIn(payment.TypeWxpay, payment.TypeStripe, payment.TypeStripeCard),
 			),
 		).
 		Order(dbent.Asc(paymentorder.FieldCreatedAt)).

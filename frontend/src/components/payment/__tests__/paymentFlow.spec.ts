@@ -104,6 +104,20 @@ describe('decidePaymentLaunch', () => {
     expect(decision.stripeMethod).toBeUndefined()
   })
 
+  it('routes the dedicated international card button to Stripe Payment Element', () => {
+    const decision = decidePaymentLaunch(createOrderResult({
+      client_secret: 'cs_test',
+    }), {
+      visibleMethod: 'stripe_card',
+      orderType: 'subscription',
+      isMobile: false,
+    })
+
+    expect(decision.kind).toBe('stripe_route')
+    expect(decision.paymentState.paymentType).toBe('stripe_card')
+    expect(decision.stripeMethod).toBeUndefined()
+  })
+
   it('uses Stripe route flow for mobile WeChat client secret', () => {
     const decision = decidePaymentLaunch(createOrderResult({
       client_secret: 'cs_test',

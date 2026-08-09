@@ -14,7 +14,8 @@ import (
 
 // GetAvailableMethodLimits collects all payment types from enabled provider
 // instances and returns limits for each, plus the global widest range.
-// Stripe sub-types (card, link) are aggregated under "stripe".
+// Legacy Stripe sub-types are aggregated under "stripe". The dedicated card
+// route stays separate so it can use a different currency.
 func (s *PaymentConfigService) GetAvailableMethodLimits(ctx context.Context) (*MethodLimitsResponse, error) {
 	instances, err := s.entClient.PaymentProviderInstance.Query().
 		Where(paymentproviderinstance.EnabledEQ(true)).All(ctx)
@@ -230,9 +231,13 @@ func pcGroupByPaymentType(instances []*dbent.PaymentProviderInstance) map[string
 		}
 	}
 	for _, inst := range instances {
-		// Stripe provider: all sub-types → single "stripe" group
+		// Legacy Stripe provider: all sub-types → single "stripe" group.
 		if inst.ProviderKey == payment.TypeStripe {
 			add(payment.TypeStripe, inst)
+			continue
+		}
+		if inst.ProviderKey == payment.TypeStripeCard {
+			add(payment.TypeStripeCard, inst)
 			continue
 		}
 		for _, t := range splitTypes(inst.SupportedTypes) {

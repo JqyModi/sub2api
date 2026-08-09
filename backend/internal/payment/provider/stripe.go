@@ -20,8 +20,9 @@ const (
 
 // Stripe implements the payment.CancelableProvider interface for Stripe payments.
 type Stripe struct {
-	instanceID string
-	config     map[string]string
+	instanceID  string
+	providerKey payment.PaymentType
+	config      map[string]string
 
 	mu          sync.Mutex
 	initialized bool
@@ -30,6 +31,17 @@ type Stripe struct {
 
 // NewStripe creates a new Stripe provider instance.
 func NewStripe(instanceID string, config map[string]string) (*Stripe, error) {
+	return newStripe(instanceID, payment.TypeStripe, config)
+}
+
+// NewStripeCard creates the dedicated USD card provider. It shares the Stripe
+// implementation and webhook contract, but has its own provider key so it can
+// be configured and selected independently from the legacy Stripe route.
+func NewStripeCard(instanceID string, config map[string]string) (*Stripe, error) {
+	return newStripe(instanceID, payment.TypeStripeCard, config)
+}
+
+func newStripe(instanceID string, providerKey payment.PaymentType, config map[string]string) (*Stripe, error) {
 	if config["secretKey"] == "" {
 		return nil, fmt.Errorf("stripe config missing required key: secretKey")
 	}
@@ -40,8 +52,9 @@ func NewStripe(instanceID string, config map[string]string) (*Stripe, error) {
 	}
 	cfg["currency"] = currency
 	return &Stripe{
-		instanceID: instanceID,
-		config:     cfg,
+		instanceID:  instanceID,
+		providerKey: providerKey,
+		config:      cfg,
 	}, nil
 }
 
@@ -60,9 +73,14 @@ func (s *Stripe) GetPublishableKey() string {
 }
 
 func (s *Stripe) Name() string        { return "Stripe" }
-func (s *Stripe) ProviderKey() string { return payment.TypeStripe }
+func (s *Stripe) ProviderKey() string {
+	if s == nil || s.providerKey == "" {
+		return payment.TypeStripe
+	}
+	return s.providerKey
+}
 func (s *Stripe) SupportedTypes() []payment.PaymentType {
-	return []payment.PaymentType{payment.TypeStripe}
+	return []payment.PaymentType{s.ProviderKey()}
 }
 
 func (s *Stripe) MerchantIdentityMetadata() map[string]string {
@@ -103,6 +121,11 @@ func (s *Stripe) CreatePayment(ctx context.Context, req payment.CreatePaymentReq
 
 	// Collect all Stripe payment_method_types from the instance's configured sub-methods
 	methods := resolveStripeMethodTypes(req.InstanceSubMethods)
+	if s.ProviderKey() == payment.TypeStripeCard {
+		// The dedicated route must never accidentally expose wallet methods from
+		// a copied or legacy supported_types value.
+		methods = []string{"card"}
+	}
 
 	pmTypes := make([]*string, len(methods))
 	for i, m := range methods {

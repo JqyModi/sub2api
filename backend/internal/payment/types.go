@@ -14,6 +14,10 @@ const (
 	TypeAlipayDirect PaymentType = "alipay_direct"
 	TypeWxpayDirect  PaymentType = "wxpay_direct"
 	TypeStripe       PaymentType = "stripe"
+	// TypeStripeCard is the dedicated international card route. It is kept
+	// separate from TypeStripe so the card route can use USD while the legacy
+	// Stripe instance remains available for CNY wallet methods.
+	TypeStripeCard PaymentType = "stripe_card"
 	TypeCard         PaymentType = "card"
 	TypeLink         PaymentType = "link"
 	TypeEasyPay      PaymentType = "easypay"
@@ -86,6 +90,8 @@ func GetBasePaymentType(t string) string {
 		return TypeEasyPay
 	case t == TypeAirwallex:
 		return TypeAirwallex
+	case t == TypeStripeCard:
+		return TypeStripeCard
 	case t == TypeStripe || t == TypeCard || t == TypeLink:
 		return TypeStripe
 	case len(t) >= len(TypeAlipay) && t[:len(TypeAlipay)] == TypeAlipay:

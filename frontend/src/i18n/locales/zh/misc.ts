@@ -325,6 +325,7 @@ export default {
       alipay: '支付宝',
       wxpay: '微信支付',
       stripe: 'Stripe',
+      stripe_card: '国际银行卡',
       airwallex: 'Airwallex',
       card: '银行卡',
       link: 'Link',

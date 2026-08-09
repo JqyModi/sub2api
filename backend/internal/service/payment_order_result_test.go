@@ -103,6 +103,26 @@ func TestBuildCreateOrderResponseDefaultsToOrderCreated(t *testing.T) {
 	}
 }
 
+func TestBuildCreateOrderResponseIncludesSelectedStripePublishableKey(t *testing.T) {
+	t.Parallel()
+
+	resp := buildCreateOrderResponse(
+		&dbent.PaymentOrder{ID: 43, ExpiresAt: time.Now()},
+		CreateOrderRequest{PaymentType: payment.TypeStripeCard},
+		12.34,
+		&payment.InstanceSelection{
+			ProviderKey: payment.TypeStripeCard,
+			Config:      map[string]string{payment.ConfigKeyPublishableKey: "pk_live_card"},
+		},
+		&payment.CreatePaymentResponse{ClientSecret: "pi_secret"},
+		payment.CreatePaymentResultOrderCreated,
+	)
+
+	if resp.PublishableKey != "pk_live_card" {
+		t.Fatalf("publishable key = %q, want pk_live_card", resp.PublishableKey)
+	}
+}
+
 func TestBuildCreateOrderResponseCopiesJSAPIPayload(t *testing.T) {
 	t.Parallel()
 

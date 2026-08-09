@@ -204,6 +204,7 @@ const paymentTypeFilterOptions = computed(() => [
   { value: 'alipay', label: t('payment.methods.alipay') },
   { value: 'wxpay', label: t('payment.methods.wxpay') },
   { value: 'stripe', label: t('payment.methods.stripe') },
+  { value: 'stripe_card', label: t('payment.methods.stripe_card') },
   { value: 'airwallex', label: t('payment.methods.airwallex') },
 ])
 
