@@ -41,7 +41,7 @@ export const PROVIDER_SUPPORTED_TYPES: Record<string, string[]> = {
   alipay: ['alipay'],
   wxpay: ['wxpay'],
 	stripe: ['card', 'alipay', 'wxpay', 'link'],
-	stripe_card: ['card'],
+	stripe_card: ['card', 'link'],
   airwallex: ['airwallex'],
 }
 

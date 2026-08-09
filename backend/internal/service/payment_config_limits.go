@@ -215,8 +215,9 @@ func (s *PaymentConfigService) pcInstanceEasyPayCustomMethodDisplayName(inst *db
 }
 
 // pcGroupByPaymentType groups instances by user-facing payment type.
-// For Stripe providers, ALL sub-types (card, link, alipay, wxpay) map to "stripe"
-// because the user sees a single "Stripe" button, not individual sub-methods.
+// Stripe is usually presented as one generic button. An instance configured
+// exclusively for WeChat Pay is the exception: exposing it as "wxpay" gives
+// users the expected payment name and icon while retaining Stripe internally.
 // Uses a seen set to avoid counting one instance twice.
 func pcGroupByPaymentType(instances []*dbent.PaymentProviderInstance) map[string][]*dbent.PaymentProviderInstance {
 	typeInstances := make(map[string][]*dbent.PaymentProviderInstance)
@@ -231,8 +232,14 @@ func pcGroupByPaymentType(instances []*dbent.PaymentProviderInstance) map[string
 		}
 	}
 	for _, inst := range instances {
-		// Legacy Stripe provider: all sub-types → single "stripe" group.
+		// A CNY Stripe instance with only wxpay is a WeChat payment route, not
+		// a generic Stripe checkout. Any other Stripe shape remains aggregated.
 		if inst.ProviderKey == payment.TypeStripe {
+			types := splitTypes(inst.SupportedTypes)
+			if len(types) == 1 && types[0] == payment.TypeWxpay {
+				add(payment.TypeWxpay, inst)
+				continue
+			}
 			add(payment.TypeStripe, inst)
 			continue
 		}

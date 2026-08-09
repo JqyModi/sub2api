@@ -546,6 +546,9 @@ const paymentGuide = computed<PaymentGuide | null>(() => {
 })
 
 const limitableTypes = computed(() => {
+  if (form.provider_key === 'stripe' && form.supported_types.length === 1 && form.supported_types[0] === 'wxpay') {
+    return [{ value: 'wxpay', label: t('payment.methods.wxpay') }]
+  }
   // Stripe: single "stripe" entry (one set of shared limits)
   if (form.provider_key === 'stripe') {
     return [{ value: 'stripe', label: 'Stripe' }]

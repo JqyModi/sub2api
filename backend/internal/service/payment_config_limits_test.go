@@ -198,6 +198,20 @@ func TestPcGroupByPaymentType(t *testing.T) {
 			t.Fatalf("stripe with empty types should still be in stripe group, got %v", groups)
 		}
 	})
+
+	t.Run("wechat-only stripe instance maps to the wxpay group", func(t *testing.T) {
+		t.Parallel()
+		stripe := makeInstance(1, payment.TypeStripe, payment.TypeWxpay, "")
+
+		groups := pcGroupByPaymentType([]*dbent.PaymentProviderInstance{stripe})
+
+		if len(groups[payment.TypeWxpay]) != 1 || groups[payment.TypeWxpay][0].ID != 1 {
+			t.Fatalf("wechat-only stripe instance should be in wxpay group, got %v", groups)
+		}
+		if len(groups[payment.TypeStripe]) != 0 {
+			t.Fatalf("wechat-only stripe instance should not be in stripe group, got %v", groups)
+		}
+	})
 }
 
 func TestPcAggregateMethodCurrency(t *testing.T) {

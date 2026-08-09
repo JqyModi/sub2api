@@ -43,7 +43,7 @@ func (s *PaymentConfigService) validateProviderConfig(providerKey string, config
 		if strings.TrimSpace(supportedTypes) != "" && !payment.InstanceSupportsType(supportedTypes, payment.TypeCard) {
 			return infraerrors.BadRequest(
 				"STRIPE_CARD_METHOD_REQUIRED",
-				"Stripe international card route must enable card",
+				"Stripe international card route must enable card (Link is optional)",
 			)
 		}
 		return nil

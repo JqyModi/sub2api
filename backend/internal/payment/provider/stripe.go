@@ -122,9 +122,9 @@ func (s *Stripe) CreatePayment(ctx context.Context, req payment.CreatePaymentReq
 	// Collect all Stripe payment_method_types from the instance's configured sub-methods
 	methods := resolveStripeMethodTypes(req.InstanceSubMethods)
 	if s.ProviderKey() == payment.TypeStripeCard {
-		// The dedicated route must never accidentally expose wallet methods from
-		// a copied or legacy supported_types value.
-		methods = []string{"card"}
+		// The dedicated USD route accepts only card and Link. It must never
+		// inherit wallet methods from a copied CNY Stripe configuration.
+		methods = filterStripeCardMethodTypes(methods)
 	}
 
 	pmTypes := make([]*string, len(methods))
@@ -162,6 +162,20 @@ func (s *Stripe) CreatePayment(ctx context.Context, req payment.CreatePaymentReq
 		ClientSecret: pi.ClientSecret,
 		Currency:     currency,
 	}, nil
+}
+
+func filterStripeCardMethodTypes(methods []string) []string {
+	allowed := make([]string, 0, 2)
+	for _, method := range methods {
+		if method != "card" && method != "link" {
+			continue
+		}
+		allowed = append(allowed, method)
+	}
+	if len(allowed) == 0 {
+		return []string{"card"}
+	}
+	return allowed
 }
 
 // QueryOrder retrieves a PaymentIntent by ID.
