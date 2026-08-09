@@ -44,6 +44,14 @@ func enabledVisibleMethodsForProvider(providerKey, supportedTypes string) []stri
 				break
 			}
 		}
+	case payment.TypeStripe:
+		// A Stripe instance becomes the user-facing WeChat route only when it
+		// is explicitly restricted to wxpay. Mixed Stripe instances stay behind
+		// the generic Stripe checkout and must not claim the WeChat button.
+		types := splitTypes(supportedTypes)
+		if len(types) == 1 && types[0] == payment.TypeWxpay {
+			addMethod(payment.TypeWxpay)
+		}
 	case payment.TypeEasyPay:
 		for _, supportedType := range splitTypes(supportedTypes) {
 			addMethod(supportedType)
