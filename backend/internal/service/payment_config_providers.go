@@ -40,7 +40,7 @@ func (s *PaymentConfigService) validateProviderConfig(providerKey string, config
 				"Stripe international card route only supports USD",
 			)
 		}
-		if strings.TrimSpace(supportedTypes) != "" && !InstanceSupportsType(supportedTypes, payment.TypeCard) {
+		if strings.TrimSpace(supportedTypes) != "" && !payment.InstanceSupportsType(supportedTypes, payment.TypeCard) {
 			return infraerrors.BadRequest(
 				"STRIPE_CARD_METHOD_REQUIRED",
 				"Stripe international card route must enable card",
@@ -48,7 +48,7 @@ func (s *PaymentConfigService) validateProviderConfig(providerKey string, config
 		}
 		return nil
 	}
-	if providerKey != payment.TypeStripe || !InstanceSupportsType(supportedTypes, payment.TypeWxpay) {
+	if providerKey != payment.TypeStripe || !payment.InstanceSupportsType(supportedTypes, payment.TypeWxpay) {
 		return nil
 	}
 	currency, err := payment.NormalizePaymentCurrency(config["currency"])
