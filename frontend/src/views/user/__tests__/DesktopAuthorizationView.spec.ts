@@ -49,11 +49,40 @@ describe('DesktopAuthorizationView', () => {
     await flushPromises()
 
     expect(approveSession).toHaveBeenCalledWith(
-      '/desktop-auth/sessions/dsa_component_test/approve'
+      '/desktop-auth/sessions/dsa_component_test/approve',
+      {}
     )
     expect(routerReplace).toHaveBeenCalledWith(
       '/purchase?tab=subscription&redirect=%2Fdesktop%2Fauthorize%3Fsession%3Ddsa_component_test'
     )
+    wrapper.unmount()
+  })
+
+  it('asks the user to choose when multiple active subscriptions exist', async () => {
+    approveSession
+      .mockResolvedValueOnce({ data: { state: 'selection_required', subscriptions: [
+        { id: 20, group_id: 4, group_name: 'Codex 标准版', expires_at: '2026-09-10T00:00:00Z' },
+        { id: 10, group_id: 3, group_name: 'Codex 轻量版', expires_at: '2026-09-01T00:00:00Z' },
+      ] } })
+      .mockResolvedValueOnce({ data: { state: 'authorized' } })
+
+    const wrapper = shallowMount(DesktopAuthorizationView, {
+      global: { stubs: { Icon: true } },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('选择此 Profile 使用的套餐')
+    expect(wrapper.text()).toContain('Codex 标准版')
+    const confirm = wrapper.findAll('button').find(button => button.text().includes('确认接入'))
+    expect(confirm).toBeTruthy()
+    await confirm!.trigger('click')
+    await flushPromises()
+
+    expect(approveSession).toHaveBeenLastCalledWith(
+      '/desktop-auth/sessions/dsa_component_test/approve',
+      { subscription_id: 20 }
+    )
+    expect(wrapper.text()).toContain('接入成功')
     wrapper.unmount()
   })
 

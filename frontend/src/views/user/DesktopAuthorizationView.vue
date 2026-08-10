@@ -22,6 +22,32 @@
         <p class="font-medium">{{ copy.paymentRequired }}</p>
         <p class="mt-1">{{ copy.paymentDetail }}</p>
       </div>
+      <div v-else-if="state === 'selection_required'" class="space-y-3">
+        <div class="rounded-xl bg-gray-50 p-4 text-sm text-gray-600 dark:bg-dark-800 dark:text-dark-200">
+          <p class="font-medium text-gray-900 dark:text-white">{{ copy.selectPlan }}</p>
+          <p class="mt-1">{{ copy.selectPlanDetail }}</p>
+        </div>
+        <button
+          v-for="subscription in subscriptions"
+          :key="subscription.id"
+          type="button"
+          class="flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition-colors"
+          :class="selectedSubscriptionId === subscription.id
+            ? 'border-primary-500 bg-primary-50 text-primary-800 dark:bg-primary-900/20 dark:text-primary-200'
+            : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300 dark:border-dark-600 dark:bg-dark-800 dark:text-dark-200'"
+          @click="selectedSubscriptionId = subscription.id"
+        >
+          <span class="flex items-center gap-3">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full border" :class="selectedSubscriptionId === subscription.id ? 'border-primary-500' : 'border-gray-300 dark:border-dark-500'">
+              <span v-if="selectedSubscriptionId === subscription.id" class="h-2.5 w-2.5 rounded-full bg-primary-500"></span>
+            </span>
+            <span>
+              <strong class="block font-medium">{{ subscription.group_name }}</strong>
+              <small class="mt-0.5 block opacity-75">{{ copy.expires }} {{ formatExpiry(subscription.expires_at) }}</small>
+            </span>
+          </span>
+        </button>
+      </div>
       <div v-else-if="errorMessage" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800/50 dark:bg-red-900/20 dark:text-red-300">
         {{ errorMessage }}
       </div>
@@ -30,6 +56,9 @@
       </div>
 
       <div class="mt-6 flex flex-wrap gap-3">
+        <button v-if="state === 'selection_required'" class="btn btn-primary" type="button" :disabled="isLoading || !selectedSubscriptionId" @click="approve(selectedSubscriptionId)">
+          {{ copy.confirm }}
+        </button>
         <button v-if="state === 'payment_required'" class="btn btn-primary" type="button" @click="goPurchase">
           {{ copy.purchase }}
         </button>
@@ -51,7 +80,8 @@ import { apiClient } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { buildDesktopSubscriptionPurchaseRedirect } from '@/utils/authRedirect'
 
-type AuthorizationState = 'pending' | 'payment_required' | 'authorized' | 'denied' | 'expired' | 'error'
+type AuthorizationState = 'pending' | 'payment_required' | 'selection_required' | 'authorized' | 'denied' | 'expired' | 'error'
+type AuthorizationSubscription = { id: number; group_id: number; group_name: string; expires_at: string }
 
 const route = useRoute()
 const router = useRouter()
@@ -60,15 +90,17 @@ const sessionId = computed(() => String(route.query.session || '').trim())
 const state = ref<AuthorizationState>('pending')
 const isLoading = ref(false)
 const errorMessage = ref('')
+const subscriptions = ref<AuthorizationSubscription[]>([])
+const selectedSubscriptionId = ref<number | null>(null)
 let paymentPollTimer: number | null = null
 
 const copy = computed(() => locale.value.startsWith('zh') ? {
-  title: '连接桌面订阅服务', subtitle: '正在为 Codex 多开助手连接当前账号。', loading: '正在检查账号和订阅状态...', confirmDetail: '正在安全连接当前设备，不会在页面显示 API Key。', confirm: '确认接入', paymentRequired: '当前账号还没有有效订阅。', paymentDetail: '正在前往套餐页面，支付完成后会自动继续接入。', purchase: '购买套餐', retry: '重新检查', success: '接入成功', successDetail: '正在返回 Codex 多开助手并完成 Profile 创建。', close: '关闭页面', cancel: '取消'
+  title: '连接桌面订阅服务', subtitle: '正在为 Codex 多开助手连接当前账号。', loading: '正在检查账号和订阅状态...', confirmDetail: '正在安全连接当前设备，不会在页面显示 API Key。', confirm: '确认接入', selectPlan: '选择此 Profile 使用的套餐', selectPlanDetail: '检测到多个有效套餐。后续请求将使用所选套餐的额度和限制。', expires: '有效期至', paymentRequired: '当前账号还没有有效订阅。', paymentDetail: '正在前往套餐页面，支付完成后会自动继续接入。', purchase: '购买套餐', retry: '重新检查', success: '接入成功', successDetail: '正在返回 Codex 多开助手并完成 Profile 创建。', close: '关闭页面', cancel: '取消'
 } : {
-  title: 'Connect desktop subscription', subtitle: 'Connecting this account to Codex Multi Launcher.', loading: 'Checking your account and subscription...', confirmDetail: 'Securely connecting this device. The API key will not be shown.', confirm: 'Authorize', paymentRequired: 'No active subscription was found.', paymentDetail: 'Opening subscription plans. Authorization continues automatically after payment.', purchase: 'Buy a plan', retry: 'Check again', success: 'Connected', successDetail: 'Returning to Codex Multi Launcher to finish profile creation.', close: 'Close page', cancel: 'Cancel'
+  title: 'Connect desktop subscription', subtitle: 'Connecting this account to Codex Multi Launcher.', loading: 'Checking your account and subscription...', confirmDetail: 'Securely connecting this device. The API key will not be shown.', confirm: 'Authorize', selectPlan: 'Choose a plan for this profile', selectPlanDetail: 'Multiple active plans were found. Requests will use the selected plan limits.', expires: 'Expires', paymentRequired: 'No active subscription was found.', paymentDetail: 'Opening subscription plans. Authorization continues automatically after payment.', purchase: 'Buy a plan', retry: 'Check again', success: 'Connected', successDetail: 'Returning to Codex Multi Launcher to finish profile creation.', close: 'Close page', cancel: 'Cancel'
 })
 
-async function approve(): Promise<void> {
+async function approve(subscriptionId?: number | null): Promise<void> {
   if (isLoading.value) return
   if (!sessionId.value) {
     errorMessage.value = copy.value.confirmDetail
@@ -77,8 +109,15 @@ async function approve(): Promise<void> {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const { data } = await apiClient.post<{ state: AuthorizationState }>(`/desktop-auth/sessions/${encodeURIComponent(sessionId.value)}/approve`)
+    const { data } = await apiClient.post<{ state: AuthorizationState; subscriptions?: AuthorizationSubscription[] }>(
+      `/desktop-auth/sessions/${encodeURIComponent(sessionId.value)}/approve`,
+      subscriptionId ? { subscription_id: subscriptionId } : {}
+    )
     state.value = data.state
+    subscriptions.value = data.subscriptions || []
+    if (data.state === 'selection_required' && subscriptions.value.length > 0 && !subscriptions.value.some(item => item.id === selectedSubscriptionId.value)) {
+      selectedSubscriptionId.value = subscriptions.value[0].id
+    }
     if (data.state === 'payment_required') {
       await goPurchase()
     }
@@ -94,6 +133,11 @@ async function approve(): Promise<void> {
   } finally {
     isLoading.value = false
   }
+}
+
+function formatExpiry(value: string): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(locale.value)
 }
 
 async function goPurchase(): Promise<void> {
