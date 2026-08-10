@@ -13,3 +13,4 @@ services:
     image: ${CODEX_AUTH_IMAGE:-jqymodi/sub2api-codex-auth:local}
     environment:
       - PAYMENT_RESUME_SIGNING_KEY=${PAYMENT_RESUME_SIGNING_KEY:-}
+      - DESKTOP_AUTH_DEFAULT_MODEL=${DESKTOP_AUTH_DEFAULT_MODEL:-gpt-5.5}

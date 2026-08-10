@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"os"
 	"testing"
 	"time"
 
@@ -27,7 +28,7 @@ func TestDesktopAuthSessionUsesPKCEAndIsConsumedOnce(t *testing.T) {
 	session.State = DesktopAuthAuthorized
 	session.AccessToken = "sk-test-device-key"
 	session.BaseURL = "https://service.example/v1"
-	session.DefaultModel = desktopAuthDefaultModel
+	session.DefaultModel = desktopAuthDefaultModel()
 	session.ProviderName = "Test service"
 	require.NoError(t, svc.save(context.Background(), session))
 
@@ -55,6 +56,7 @@ func TestDesktopAuthSessionExpiresInStore(t *testing.T) {
 }
 
 func TestDesktopAuthApprovalCreatesUserDeviceKey(t *testing.T) {
+	t.Setenv("DESKTOP_AUTH_DEFAULT_MODEL", "gpt-5.6-sol")
 	store := newTestDesktopAuthStore()
 	issuer := &testDesktopAuthKeyIssuer{key: &APIKey{ID: 99, Key: "sk-device-test"}}
 	reader := &testDesktopAuthSubscriptionReader{subscriptions: []UserSubscription{{
@@ -81,7 +83,13 @@ func TestDesktopAuthApprovalCreatesUserDeviceKey(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "sk-device-test", consumed.AccessToken)
 	require.Equal(t, "https://service.example/v1", consumed.BaseURL)
+	require.Equal(t, "gpt-5.6-sol", consumed.DefaultModel)
 	require.NotNil(t, consumed.SubscriptionExpiresAt)
+}
+
+func TestDesktopAuthDefaultModelFallback(t *testing.T) {
+	require.NoError(t, os.Unsetenv("DESKTOP_AUTH_DEFAULT_MODEL"))
+	require.Equal(t, "gpt-5.5", desktopAuthDefaultModel())
 }
 
 type testDesktopAuthStore struct {

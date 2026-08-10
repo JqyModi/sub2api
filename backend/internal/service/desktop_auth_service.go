@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
@@ -19,7 +20,7 @@ const (
 	desktopAuthSessionTTL    = 30 * time.Minute
 	desktopAuthPollInterval  = 2
 	desktopAuthSessionPrefix = "desktop-auth:session:"
-	desktopAuthDefaultModel  = "gpt-5-codex"
+	desktopAuthFallbackModel = "gpt-5.5"
 	desktopAuthKeyNamePrefix = "Codex Multi Launcher"
 )
 
@@ -183,13 +184,20 @@ func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID strin
 	session.APIKeyID = key.ID
 	session.AccessToken = key.Key
 	session.BaseURL = strings.TrimRight(baseURL, "/") + "/v1"
-	session.DefaultModel = desktopAuthDefaultModel
+	session.DefaultModel = desktopAuthDefaultModel()
 	session.ProviderName = "Sub2API subscription"
 	session.SubscriptionExpiresAt = &subscriptionExpiresAt
 	if err := s.save(ctx, session); err != nil {
 		return nil, err
 	}
 	return statusFromDesktopSession(session), nil
+}
+
+func desktopAuthDefaultModel() string {
+	if model := strings.TrimSpace(os.Getenv("DESKTOP_AUTH_DEFAULT_MODEL")); model != "" {
+		return model
+	}
+	return desktopAuthFallbackModel
 }
 
 func (s *DesktopAuthService) PollToken(ctx context.Context, sessionID, codeVerifier string) (*DesktopAuthSession, *DesktopAuthStatusResponse, error) {
