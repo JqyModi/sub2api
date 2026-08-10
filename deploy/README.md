@@ -29,6 +29,8 @@ This directory contains files for deploying Sub2API on Linux servers and Apple-s
 | `DATAMANAGEMENTD_CN.md` | datamanagementd 部署与联动说明（中文） |
 | `config.example.yaml` | Example configuration file |
 | `EDGE_SECURITY.md` | Reverse proxy, CDN/WAF, trusted proxy, and ingress hardening guide |
+| `backup/sub2api-backup.sh` | PostgreSQL、Redis 和部署配置的滚动备份脚本（每日保留 7 份、每周保留 4 份） |
+| `backup/README.zh-CN.md` | 滚动备份检查与恢复演练说明 |
 
 ---
 
