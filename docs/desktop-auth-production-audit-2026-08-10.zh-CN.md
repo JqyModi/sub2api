@@ -22,6 +22,7 @@
 - 密码重置、全局 TOTP 能力、风控中心和 cyber 会话自动屏蔽已启用。
 - 最新生产备份已在隔离的临时 PostgreSQL/Redis 容器完整恢复；核心表和 Redis 数据校验通过，生产容器未被修改。
 - Cloudflare Turnstile 已创建并接入登录、注册和密码找回流程；公开配置接口确认已启用且站点密钥已下发。
+- 管理员本人已绑定 TOTP，敏感操作 step-up 2FA 已启用并通过数据库持久化状态确认。
 - OCI Object Storage 私有异地备份已启用：实例使用 Instance Principal 上传，不保存 OCI 用户密钥；每日备份保留 35 天，每周备份保留 180 天。
 - 已从 Object Storage 下载实际归档并完成 SHA-256 校验与隔离恢复，验证用户 2、订单 68、订阅 2、API Key 3、Redis Key 384，生产容器未被修改。
 
@@ -58,7 +59,7 @@
 
 ### 4. 加固账号与注册安全
 
-密码重置、全局 TOTP、Cloudflare Turnstile、风控中心和 cyber 会话自动屏蔽已经启用，面板账号/IP 限流原本已开启。Turnstile 生产 Widget 已绑定 `minai.eu.org`（覆盖 `sub2api.minai.eu.org`），公开设置验证通过。剩余需要账户所有者本人完成的交互只有管理员 TOTP 绑定；绑定后再开启敏感操作 step-up 2FA。
+密码重置、全局 TOTP、管理员本人 TOTP、敏感操作 step-up 2FA、Cloudflare Turnstile、风控中心和 cyber 会话自动屏蔽均已启用，面板账号/IP 限流原本已开启。Turnstile 生产 Widget 已绑定 `minai.eu.org`（覆盖 `sub2api.minai.eu.org`），公开设置验证通过；`step_up_enabled` 已通过生产数据库确认持久化为 `true`。
 
 - 管理员启用 TOTP，日常使用普通账号，管理员账号不用于消费或购买。
 - 注册、登录、验证码和找回密码接入 Turnstile 或等价的人机校验与速率限制。
