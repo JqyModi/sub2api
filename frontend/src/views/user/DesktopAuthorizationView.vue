@@ -62,7 +62,7 @@
         <button v-if="state === 'payment_required'" class="btn btn-primary" type="button" @click="goPurchase">
           {{ copy.purchase }}
         </button>
-        <button v-if="state === 'error' || state === 'expired'" class="btn btn-primary" type="button" :disabled="isLoading || !sessionId" @click="approve">
+        <button v-if="state === 'error' || state === 'expired'" class="btn btn-primary" type="button" :disabled="isLoading || !sessionId" @click="approve()">
           {{ copy.retry }}
         </button>
         <button v-if="state !== 'authorized'" class="btn btn-secondary" type="button" @click="closePage">
