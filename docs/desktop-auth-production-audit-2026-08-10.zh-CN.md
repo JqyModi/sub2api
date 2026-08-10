@@ -21,6 +21,9 @@
 - 站点品牌、客服邮箱和教程入口已配置；服务条款、使用政策、支持地区、服务说明、隐私政策和退款规则已发布并要求登录确认。
 - 密码重置、全局 TOTP 能力、风控中心和 cyber 会话自动屏蔽已启用。
 - 最新生产备份已在隔离的临时 PostgreSQL/Redis 容器完整恢复；核心表和 Redis 数据校验通过，生产容器未被修改。
+- Cloudflare Turnstile 已创建并接入登录、注册和密码找回流程；公开配置接口确认已启用且站点密钥已下发。
+- OCI Object Storage 私有异地备份已启用：实例使用 Instance Principal 上传，不保存 OCI 用户密钥；每日备份保留 35 天，每周备份保留 180 天。
+- 已从 Object Storage 下载实际归档并完成 SHA-256 校验与隔离恢复，验证用户 2、订单 68、订阅 2、API Key 3、Redis Key 384，生产容器未被修改。
 
 ## P0：公开推送前必须完成
 
@@ -55,7 +58,7 @@
 
 ### 4. 加固账号与注册安全
 
-密码重置、全局 TOTP、风控中心和 cyber 会话自动屏蔽已经启用，面板账号/IP 限流原本已开启。剩余两项需要账户所有者完成交互：管理员本人 TOTP 绑定，以及 Cloudflare 登录后创建 Turnstile Widget。
+密码重置、全局 TOTP、Cloudflare Turnstile、风控中心和 cyber 会话自动屏蔽已经启用，面板账号/IP 限流原本已开启。Turnstile 生产 Widget 已绑定 `minai.eu.org`（覆盖 `sub2api.minai.eu.org`），公开设置验证通过。剩余需要账户所有者本人完成的交互只有管理员 TOTP 绑定；绑定后再开启敏感操作 step-up 2FA。
 
 - 管理员启用 TOTP，日常使用普通账号，管理员账号不用于消费或购买。
 - 注册、登录、验证码和找回密码接入 Turnstile 或等价的人机校验与速率限制。
@@ -64,7 +67,9 @@
 
 ### 5. 完成异地备份和恢复演练
 
-隔离容器恢复演练已完成，恢复结果为用户 2、订单 68、订阅 2、API Key 2、Redis Key 384。当前滚动备份仍位于同一块 OCI 系统盘；OCI Object Storage 上传脚本已准备，待 OCI CLI 重新授权后创建私有 Bucket、Instance Principal 权限和生命周期策略。
+已完成同机备份和异地备份两层恢复演练。私有 Bucket `sub2api-prod-backups-20260810` 已启用版本控制与服务端加密；实例通过 Dynamic Group 和最小 IAM Policy 使用 Instance Principal 上传。每日与每周上传任务已安装到 cron，生命周期分别为 35 天和 180 天。
+
+2026-08-10 已从 Object Storage 下载 `daily-20260810T095108Z`，归档 SHA-256 与远端校验文件一致。隔离恢复结果为用户 2、订单 68、订阅 2、API Key 3、Redis Key 384，证明异地对象可用于实际恢复。
 
 - 每周至少同步一份加密备份到 OCI Object Storage、Cloudflare R2 或另一独立位置。
 - 在临时 PostgreSQL/Redis 环境恢复最近备份，核对用户、订单、订阅、设备 Key 和支付配置。
