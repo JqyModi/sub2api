@@ -25,6 +25,19 @@ sudo find /opt/sub2api/backups/rolling -maxdepth 2 -type f -printf '%p %s\n'
 sudo /usr/local/sbin/sub2api-backup daily
 ```
 
+## OCI Object Storage 异地副本
+
+`sub2api-offsite-upload.sh` 将最新每日/每周目录打包后，通过 OCI Instance Principal 上传到私有 Bucket。服务器无需保存 OCI 用户 API Key；对象默认使用 OCI 服务端加密。
+
+安装完成后的计划任务：每日 `03:10` 上传每日副本，每周日 `03:30` 上传每周副本。建议 Bucket 生命周期分别保留每日 35 天、每周 180 天。
+
+手动上传与查看日志：
+
+```bash
+sudo /usr/local/sbin/sub2api-offsite-upload daily
+sudo tail -n 100 /var/log/sub2api-offsite-backup.log
+```
+
 ## 恢复演练
 
 在维护窗口执行；恢复会覆盖当前数据库与 Redis 数据。先停止应用，再保留当前目录作为额外回退点。
@@ -46,3 +59,9 @@ sudo docker compose -f docker-compose.local.yml up -d
 ```
 
 恢复前可通过 `sha256sum -c manifest.txt` 校验归档。每周应将一份备份复制到另一处存储，避免整台实例不可用时同盘备份一并丢失。
+
+上线前及每月执行一次无损恢复演练。脚本会创建临时 PostgreSQL/Redis 容器，恢复并核对核心表，完成后自动清理，不修改生产容器：
+
+```bash
+sudo /usr/local/sbin/sub2api-restore-verify
+```
