@@ -1,3 +1,5 @@
 # Upload private, server-side encrypted copies to OCI Object Storage.
+SUB2API_OCI_BACKUP_BUCKET=sub2api-prod-backups-20260810
+SUB2API_OCI_REGION=ap-tokyo-1
 10 3 * * * root /usr/local/sbin/sub2api-offsite-upload daily >> /var/log/sub2api-offsite-backup.log 2>&1
 30 3 * * 0 root /usr/local/sbin/sub2api-offsite-upload weekly >> /var/log/sub2api-offsite-backup.log 2>&1

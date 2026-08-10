@@ -8,7 +8,7 @@ case "$MODE" in
 esac
 
 BACKUP_ROOT="${SUB2API_BACKUP_ROOT:-/opt/sub2api/backups/rolling}"
-BUCKET="${SUB2API_OCI_BACKUP_BUCKET:-sub2api-backups}"
+BUCKET="${SUB2API_OCI_BACKUP_BUCKET:-sub2api-prod-backups-20260810}"
 REGION="${SUB2API_OCI_REGION:-ap-tokyo-1}"
 LOCK_FILE="${SUB2API_OFFSITE_LOCK:-/run/lock/sub2api-offsite-backup.lock}"
 
