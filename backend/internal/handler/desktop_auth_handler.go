@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 
@@ -28,6 +29,10 @@ type startDesktopAuthRequest struct {
 type pollDesktopAuthRequest struct {
 	SessionID    string `json:"session_id" binding:"required"`
 	CodeVerifier string `json:"code_verifier" binding:"required"`
+}
+
+type approveDesktopAuthRequest struct {
+	SubscriptionID *int64 `json:"subscription_id"`
 }
 
 func (h *DesktopAuthHandler) Start(c *gin.Context) {
@@ -69,11 +74,12 @@ func (h *DesktopAuthHandler) PollToken(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{
-		"access_token":  session.AccessToken,
-		"base_url":      session.BaseURL,
-		"default_model": session.DefaultModel,
-		"expires_at":    session.SubscriptionExpiresAt,
-		"provider_name": session.ProviderName,
+		"access_token":    session.AccessToken,
+		"base_url":        session.BaseURL,
+		"default_model":   session.DefaultModel,
+		"expires_at":      session.SubscriptionExpiresAt,
+		"provider_name":   session.ProviderName,
+		"subscription_id": session.SubscriptionID,
 	})
 }
 
@@ -83,8 +89,17 @@ func (h *DesktopAuthHandler) Approve(c *gin.Context) {
 		response.Unauthorized(c, "User not authenticated")
 		return
 	}
-	result, err := h.service.ApproveSession(c.Request.Context(), strings.TrimSpace(c.Param("sessionID")), subject.UserID, requestOrigin(c))
+	var req approveDesktopAuthRequest
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		response.BadRequest(c, "Invalid desktop authorization approval request")
+		return
+	}
+	result, err := h.service.ApproveSession(c.Request.Context(), strings.TrimSpace(c.Param("sessionID")), subject.UserID, req.SubscriptionID, requestOrigin(c))
 	if err != nil {
+		if errors.Is(err, service.ErrDesktopAuthInvalidSubscription) {
+			response.BadRequest(c, "The selected subscription is not active")
+			return
+		}
 		response.ErrorFrom(c, err)
 		return
 	}

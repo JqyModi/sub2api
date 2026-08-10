@@ -25,38 +25,42 @@ const (
 )
 
 var (
-	ErrDesktopAuthSessionNotFound = errors.New("desktop authorization session not found")
-	ErrDesktopAuthStoreNotFound   = errors.New("desktop authorization store entry not found")
-	ErrDesktopAuthSessionExpired  = errors.New("desktop authorization session expired")
-	ErrDesktopAuthInvalidClient   = errors.New("desktop authorization client is invalid")
-	ErrDesktopAuthInvalidVerifier = errors.New("desktop authorization verifier is invalid")
-	ErrDesktopAuthNotAuthorized   = errors.New("desktop authorization is not complete")
+	ErrDesktopAuthSessionNotFound     = errors.New("desktop authorization session not found")
+	ErrDesktopAuthStoreNotFound       = errors.New("desktop authorization store entry not found")
+	ErrDesktopAuthSessionExpired      = errors.New("desktop authorization session expired")
+	ErrDesktopAuthInvalidClient       = errors.New("desktop authorization client is invalid")
+	ErrDesktopAuthInvalidVerifier     = errors.New("desktop authorization verifier is invalid")
+	ErrDesktopAuthInvalidSubscription = errors.New("desktop authorization subscription is invalid")
+	ErrDesktopAuthNotAuthorized       = errors.New("desktop authorization is not complete")
 )
 
 type DesktopAuthSessionState string
 
 const (
-	DesktopAuthPending         DesktopAuthSessionState = "pending"
-	DesktopAuthPaymentRequired DesktopAuthSessionState = "payment_required"
-	DesktopAuthAuthorized      DesktopAuthSessionState = "authorized"
-	DesktopAuthDenied          DesktopAuthSessionState = "denied"
-	DesktopAuthExpired         DesktopAuthSessionState = "expired"
+	DesktopAuthPending           DesktopAuthSessionState = "pending"
+	DesktopAuthPaymentRequired   DesktopAuthSessionState = "payment_required"
+	DesktopAuthSelectionRequired DesktopAuthSessionState = "selection_required"
+	DesktopAuthAuthorized        DesktopAuthSessionState = "authorized"
+	DesktopAuthDenied            DesktopAuthSessionState = "denied"
+	DesktopAuthExpired           DesktopAuthSessionState = "expired"
 )
 
 type DesktopAuthSession struct {
-	ID                    string                  `json:"id"`
-	ClientID              string                  `json:"client_id"`
-	CodeChallenge         string                  `json:"code_challenge"`
-	DeviceName            string                  `json:"device_name"`
-	State                 DesktopAuthSessionState `json:"state"`
-	UserID                int64                   `json:"user_id,omitempty"`
-	APIKeyID              int64                   `json:"api_key_id,omitempty"`
-	AccessToken           string                  `json:"access_token,omitempty"`
-	BaseURL               string                  `json:"base_url,omitempty"`
-	DefaultModel          string                  `json:"default_model,omitempty"`
-	ProviderName          string                  `json:"provider_name,omitempty"`
-	SubscriptionExpiresAt *time.Time              `json:"subscription_expires_at,omitempty"`
-	ExpiresAt             time.Time               `json:"expires_at"`
+	ID                    string                          `json:"id"`
+	ClientID              string                          `json:"client_id"`
+	CodeChallenge         string                          `json:"code_challenge"`
+	DeviceName            string                          `json:"device_name"`
+	State                 DesktopAuthSessionState         `json:"state"`
+	UserID                int64                           `json:"user_id,omitempty"`
+	APIKeyID              int64                           `json:"api_key_id,omitempty"`
+	SubscriptionID        int64                           `json:"subscription_id,omitempty"`
+	SubscriptionOptions   []DesktopAuthSubscriptionOption `json:"subscription_options,omitempty"`
+	AccessToken           string                          `json:"access_token,omitempty"`
+	BaseURL               string                          `json:"base_url,omitempty"`
+	DefaultModel          string                          `json:"default_model,omitempty"`
+	ProviderName          string                          `json:"provider_name,omitempty"`
+	SubscriptionExpiresAt *time.Time                      `json:"subscription_expires_at,omitempty"`
+	ExpiresAt             time.Time                       `json:"expires_at"`
 }
 
 type DesktopAuthSessionResponse struct {
@@ -67,10 +71,18 @@ type DesktopAuthSessionResponse struct {
 }
 
 type DesktopAuthStatusResponse struct {
-	State                 DesktopAuthSessionState `json:"state"`
-	ProviderName          string                  `json:"provider_name,omitempty"`
-	DefaultModel          string                  `json:"default_model,omitempty"`
-	SubscriptionExpiresAt *time.Time              `json:"subscription_expires_at,omitempty"`
+	State                 DesktopAuthSessionState         `json:"state"`
+	ProviderName          string                          `json:"provider_name,omitempty"`
+	DefaultModel          string                          `json:"default_model,omitempty"`
+	SubscriptionExpiresAt *time.Time                      `json:"subscription_expires_at,omitempty"`
+	Subscriptions         []DesktopAuthSubscriptionOption `json:"subscriptions,omitempty"`
+}
+
+type DesktopAuthSubscriptionOption struct {
+	ID        int64     `json:"id"`
+	GroupID   int64     `json:"group_id"`
+	GroupName string    `json:"group_name"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type DesktopAuthService struct {
@@ -137,7 +149,7 @@ func (s *DesktopAuthService) CreateSession(ctx context.Context, clientID, codeCh
 	}, nil
 }
 
-func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID string, userID int64, baseURL string) (*DesktopAuthStatusResponse, error) {
+func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID string, userID int64, selectedSubscriptionID *int64, baseURL string) (*DesktopAuthStatusResponse, error) {
 	session, err := s.load(ctx, sessionID)
 	if err != nil {
 		return nil, err
@@ -168,13 +180,34 @@ func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID strin
 		return statusFromDesktopSession(session), nil
 	}
 
+	if len(subscriptions) > 1 && selectedSubscriptionID == nil {
+		session.State = DesktopAuthSelectionRequired
+		session.SubscriptionOptions = desktopAuthSubscriptionOptions(subscriptions)
+		if err := s.save(ctx, session); err != nil {
+			return nil, err
+		}
+		return statusFromDesktopSession(session), nil
+	}
+
 	subscription := subscriptions[0]
+	if selectedSubscriptionID != nil {
+		matched := false
+		for i := range subscriptions {
+			if subscriptions[i].ID == *selectedSubscriptionID {
+				subscription = subscriptions[i]
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return nil, ErrDesktopAuthInvalidSubscription
+		}
+	}
 	groupID := subscription.GroupID
 	subscriptionExpiresAt := subscription.ExpiresAt.UTC()
 	key, err := s.apiKeyIssuer.Create(ctx, userID, CreateAPIKeyRequest{
-		Name:      desktopAuthKeyName(session.DeviceName),
-		GroupID:   &groupID,
-		ExpiresAt: &subscriptionExpiresAt,
+		Name:    desktopAuthKeyName(session.DeviceName),
+		GroupID: &groupID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create desktop API key: %w", err)
@@ -182,6 +215,7 @@ func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID strin
 
 	session.State = DesktopAuthAuthorized
 	session.APIKeyID = key.ID
+	session.SubscriptionID = subscription.ID
 	session.AccessToken = key.Key
 	session.BaseURL = strings.TrimRight(baseURL, "/") + "/v1"
 	session.DefaultModel = desktopAuthDefaultModel()
@@ -191,6 +225,24 @@ func (s *DesktopAuthService) ApproveSession(ctx context.Context, sessionID strin
 		return nil, err
 	}
 	return statusFromDesktopSession(session), nil
+}
+
+func desktopAuthSubscriptionOptions(subscriptions []UserSubscription) []DesktopAuthSubscriptionOption {
+	options := make([]DesktopAuthSubscriptionOption, 0, len(subscriptions))
+	for i := range subscriptions {
+		subscription := subscriptions[i]
+		groupName := fmt.Sprintf("Subscription %d", subscription.GroupID)
+		if subscription.Group != nil && strings.TrimSpace(subscription.Group.Name) != "" {
+			groupName = subscription.Group.Name
+		}
+		options = append(options, DesktopAuthSubscriptionOption{
+			ID:        subscription.ID,
+			GroupID:   subscription.GroupID,
+			GroupName: groupName,
+			ExpiresAt: subscription.ExpiresAt.UTC(),
+		})
+	}
+	return options
 }
 
 func desktopAuthDefaultModel() string {
@@ -262,6 +314,7 @@ func statusFromDesktopSession(session DesktopAuthSession) *DesktopAuthStatusResp
 		ProviderName:          session.ProviderName,
 		DefaultModel:          session.DefaultModel,
 		SubscriptionExpiresAt: session.SubscriptionExpiresAt,
+		Subscriptions:         session.SubscriptionOptions,
 	}
 }
 

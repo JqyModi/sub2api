@@ -51,23 +51,63 @@ func TestDesktopAuthHTTPFlow(t *testing.T) {
 	approve := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/sessions/"+created.Data.SessionID+"/approve", "{}")
 	require.Equal(t, http.StatusOK, approve.Code)
 	require.Equal(t, int64(7), *issuer.request.GroupID)
+	require.Nil(t, issuer.request.ExpiresAt)
 
 	token := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/token", `{"session_id":"`+created.Data.SessionID+`","code_verifier":"`+verifier+`"}`)
 	require.Equal(t, http.StatusOK, token.Code)
 	var exchanged struct {
 		Data struct {
-			AccessToken string `json:"access_token"`
-			BaseURL     string `json:"base_url"`
-			ExpiresAt   string `json:"expires_at"`
+			AccessToken    string `json:"access_token"`
+			BaseURL        string `json:"base_url"`
+			ExpiresAt      string `json:"expires_at"`
+			SubscriptionID int64  `json:"subscription_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(token.Body.Bytes(), &exchanged))
 	require.Equal(t, "sk-http-device-key", exchanged.Data.AccessToken)
 	require.Equal(t, "http://example.test/v1", exchanged.Data.BaseURL)
 	require.NotEmpty(t, exchanged.Data.ExpiresAt)
+	require.Equal(t, int64(9), exchanged.Data.SubscriptionID)
 
 	reused := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/token", `{"session_id":"`+created.Data.SessionID+`","code_verifier":"`+verifier+`"}`)
 	require.Equal(t, http.StatusGone, reused.Code)
+}
+
+func TestDesktopAuthHTTPFlowSelectsSubscription(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := newDesktopAuthHandlerStore()
+	issuer := &desktopAuthHandlerKeyIssuer{key: &service.APIKey{ID: 2, Key: "sk-selected-device-key"}}
+	reader := &desktopAuthHandlerSubscriptionReader{subscriptions: []service.UserSubscription{
+		{ID: 20, UserID: 42, GroupID: 4, ExpiresAt: time.Now().Add(30 * 24 * time.Hour), Group: &service.Group{Name: "Codex Standard"}},
+		{ID: 10, UserID: 42, GroupID: 3, ExpiresAt: time.Now().Add(15 * 24 * time.Hour), Group: &service.Group{Name: "Codex Lite"}},
+	}}
+	h := NewDesktopAuthHandler(service.NewDesktopAuthService(store, issuer, reader))
+	router := gin.New()
+	router.POST("/api/v1/desktop-auth/sessions", h.Start)
+	router.POST("/api/v1/desktop-auth/sessions/:sessionID/approve", func(c *gin.Context) {
+		c.Set(string(servermiddleware.ContextKeyUser), servermiddleware.AuthSubject{UserID: 42})
+		h.Approve(c)
+	})
+
+	start := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/sessions", `{"client_id":"codex-multi-launcher","code_challenge":"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_","device_name":"Test Mac"}`)
+	require.Equal(t, http.StatusOK, start.Code)
+	var created struct {
+		Data struct {
+			SessionID string `json:"session_id"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(start.Body.Bytes(), &created))
+
+	choose := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/sessions/"+created.Data.SessionID+"/approve", "{}")
+	require.Equal(t, http.StatusOK, choose.Code)
+	require.Contains(t, choose.Body.String(), `"state":"selection_required"`)
+	require.Contains(t, choose.Body.String(), `"group_name":"Codex Standard"`)
+	require.Zero(t, issuer.request.GroupID)
+
+	approve := requestDesktopAuth(t, router, http.MethodPost, "/api/v1/desktop-auth/sessions/"+created.Data.SessionID+"/approve", `{"subscription_id":10}`)
+	require.Equal(t, http.StatusOK, approve.Code)
+	require.Equal(t, int64(3), *issuer.request.GroupID)
+	require.Nil(t, issuer.request.ExpiresAt)
 }
 
 func TestDesktopAuthRequestOrigin(t *testing.T) {

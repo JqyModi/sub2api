@@ -70,14 +70,13 @@ func TestDesktopAuthApprovalCreatesUserDeviceKey(t *testing.T) {
 	created, err := svc.CreateSession(context.Background(), desktopAuthClientID, challenge, "MacBook", "https://service.example/desktop/authorize")
 	require.NoError(t, err)
 
-	status, err := svc.ApproveSession(context.Background(), created.SessionID, 42, "https://service.example")
+	status, err := svc.ApproveSession(context.Background(), created.SessionID, 42, nil, "https://service.example")
 	require.NoError(t, err)
 	require.Equal(t, DesktopAuthAuthorized, status.State)
 	require.Equal(t, int64(42), issuer.userID)
 	require.Equal(t, int64(12), *issuer.request.GroupID)
 	require.Equal(t, "Codex Multi Launcher - MacBook", issuer.request.Name)
-	require.NotNil(t, issuer.request.ExpiresAt)
-	require.WithinDuration(t, reader.subscriptions[0].ExpiresAt, *issuer.request.ExpiresAt, time.Second)
+	require.Nil(t, issuer.request.ExpiresAt)
 
 	consumed, _, err := svc.PollToken(context.Background(), created.SessionID, verifier)
 	require.NoError(t, err)
@@ -85,6 +84,50 @@ func TestDesktopAuthApprovalCreatesUserDeviceKey(t *testing.T) {
 	require.Equal(t, "https://service.example/v1", consumed.BaseURL)
 	require.Equal(t, "gpt-5.6-sol", consumed.DefaultModel)
 	require.NotNil(t, consumed.SubscriptionExpiresAt)
+	require.Equal(t, int64(7), consumed.SubscriptionID)
+}
+
+func TestDesktopAuthApprovalRequiresSelectionForMultipleSubscriptions(t *testing.T) {
+	store := newTestDesktopAuthStore()
+	issuer := &testDesktopAuthKeyIssuer{key: &APIKey{ID: 100, Key: "sk-selected-device"}}
+	reader := &testDesktopAuthSubscriptionReader{subscriptions: []UserSubscription{
+		{ID: 8, UserID: 42, GroupID: 20, ExpiresAt: time.Now().Add(30 * 24 * time.Hour), Group: &Group{Name: "Codex Pro"}},
+		{ID: 7, UserID: 42, GroupID: 10, ExpiresAt: time.Now().Add(15 * 24 * time.Hour), Group: &Group{Name: "Codex Lite"}},
+	}}
+	svc := NewDesktopAuthService(store, issuer, reader)
+	created, err := svc.CreateSession(context.Background(), desktopAuthClientID, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_", "Windows", "https://service.example/desktop/authorize")
+	require.NoError(t, err)
+
+	status, err := svc.ApproveSession(context.Background(), created.SessionID, 42, nil, "https://service.example")
+	require.NoError(t, err)
+	require.Equal(t, DesktopAuthSelectionRequired, status.State)
+	require.Len(t, status.Subscriptions, 2)
+	require.Equal(t, "Codex Pro", status.Subscriptions[0].GroupName)
+	require.Zero(t, issuer.userID)
+
+	selectedID := int64(7)
+	status, err = svc.ApproveSession(context.Background(), created.SessionID, 42, &selectedID, "https://service.example")
+	require.NoError(t, err)
+	require.Equal(t, DesktopAuthAuthorized, status.State)
+	require.Equal(t, int64(10), *issuer.request.GroupID)
+	require.Nil(t, issuer.request.ExpiresAt)
+}
+
+func TestDesktopAuthApprovalRejectsInactiveSelection(t *testing.T) {
+	store := newTestDesktopAuthStore()
+	issuer := &testDesktopAuthKeyIssuer{key: &APIKey{ID: 100, Key: "sk-selected-device"}}
+	reader := &testDesktopAuthSubscriptionReader{subscriptions: []UserSubscription{
+		{ID: 8, UserID: 42, GroupID: 20, ExpiresAt: time.Now().Add(30 * 24 * time.Hour)},
+		{ID: 7, UserID: 42, GroupID: 10, ExpiresAt: time.Now().Add(15 * 24 * time.Hour)},
+	}}
+	svc := NewDesktopAuthService(store, issuer, reader)
+	created, err := svc.CreateSession(context.Background(), desktopAuthClientID, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_", "Windows", "https://service.example/desktop/authorize")
+	require.NoError(t, err)
+
+	selectedID := int64(999)
+	_, err = svc.ApproveSession(context.Background(), created.SessionID, 42, &selectedID, "https://service.example")
+	require.ErrorIs(t, err, ErrDesktopAuthInvalidSubscription)
+	require.Zero(t, issuer.userID)
 }
 
 func TestDesktopAuthDefaultModelFallback(t *testing.T) {
