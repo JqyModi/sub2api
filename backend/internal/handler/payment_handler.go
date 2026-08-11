@@ -62,12 +62,15 @@ func (h *PaymentHandler) GetPlans(c *gin.Context) {
 		PeakRateMultiplier float64  `json:"peak_rate_multiplier"`
 		Name               string   `json:"name"`
 		Description        string   `json:"description"`
+		NameEN             string   `json:"name_en"`
+		DescriptionEN      string   `json:"description_en"`
 		Price              float64  `json:"price"`
 		OriginalPrice      *float64 `json:"original_price,omitempty"`
 		Currency           string   `json:"currency,omitempty"`
 		ValidityDays       int      `json:"validity_days"`
 		ValidityUnit       string   `json:"validity_unit"`
 		Features           string   `json:"features"`
+		FeaturesEN         string   `json:"features_en"`
 		ProductName        string   `json:"product_name"`
 		ForSale            bool     `json:"for_sale"`
 		MaxSales           int      `json:"max_sales"`
@@ -95,9 +98,10 @@ func (h *PaymentHandler) GetPlans(c *gin.Context) {
 			GroupPlatform: gi.Platform, GroupName: gi.Name,
 			RateMultiplier: gi.RateMultiplier, PeakRateEnabled: gi.PeakRateEnabled,
 			PeakStart: gi.PeakStart, PeakEnd: gi.PeakEnd, PeakRateMultiplier: gi.PeakRateMultiplier,
-			Name: p.Name, Description: p.Description, Price: p.Price, OriginalPrice: p.OriginalPrice,
+			Name: p.Name, Description: p.Description, NameEN: p.NameEn, DescriptionEN: p.DescriptionEn,
+			Price: p.Price, OriginalPrice: p.OriginalPrice,
 			Currency:     p.Currency,
-			ValidityDays: p.ValidityDays, ValidityUnit: p.ValidityUnit, Features: p.Features,
+			ValidityDays: p.ValidityDays, ValidityUnit: p.ValidityUnit, Features: p.Features, FeaturesEN: p.FeaturesEn,
 			ProductName: p.ProductName, ForSale: p.ForSale, SortOrder: p.SortOrder,
 			MaxSales: p.MaxSales, PerUserLimit: p.PerUserLimit,
 			SoldCount: soldCount, RemainingSales: remainingSales,
@@ -159,9 +163,11 @@ func (h *PaymentHandler) GetCheckoutInfo(c *gin.Context) {
 			DailyLimitUSD:  gi.DailyLimitUSD,
 			WeeklyLimitUSD: gi.WeeklyLimitUSD, MonthlyLimitUSD: gi.MonthlyLimitUSD,
 			ModelScopes: gi.ModelScopes,
-			Name:        p.Name, Description: p.Description, Price: p.Price, OriginalPrice: p.OriginalPrice,
+			Name:        p.Name, Description: p.Description, NameEN: p.NameEn, DescriptionEN: p.DescriptionEn,
+			Price: p.Price, OriginalPrice: p.OriginalPrice,
 			Currency:     p.Currency,
-			ValidityDays: p.ValidityDays, ValidityUnit: p.ValidityUnit, Features: parseFeatures(p.Features),
+			ValidityDays: p.ValidityDays, ValidityUnit: p.ValidityUnit,
+			Features: parseFeatures(p.Features), FeaturesEN: parseFeatures(p.FeaturesEn),
 			ProductName: p.ProductName,
 			MaxSales:    p.MaxSales, PerUserLimit: p.PerUserLimit,
 			SoldCount: soldCount, RemainingSales: remainingSales,
@@ -217,12 +223,15 @@ type checkoutPlan struct {
 	ModelScopes        []string `json:"supported_model_scopes"`
 	Name               string   `json:"name"`
 	Description        string   `json:"description"`
+	NameEN             string   `json:"name_en"`
+	DescriptionEN      string   `json:"description_en"`
 	Price              float64  `json:"price"`
 	OriginalPrice      *float64 `json:"original_price,omitempty"`
 	Currency           string   `json:"currency,omitempty"`
 	ValidityDays       int      `json:"validity_days"`
 	ValidityUnit       string   `json:"validity_unit"`
 	Features           []string `json:"features"`
+	FeaturesEN         []string `json:"features_en"`
 	ProductName        string   `json:"product_name"`
 	MaxSales           int      `json:"max_sales"`
 	PerUserLimit       int      `json:"per_user_limit"`

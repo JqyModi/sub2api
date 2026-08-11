@@ -69,6 +69,16 @@ func Description(v string) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldEQ(FieldDescription, v))
 }
 
+// NameEn applies equality check predicate on the "name_en" field. It's identical to NameEnEQ.
+func NameEn(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldNameEn, v))
+}
+
+// DescriptionEn applies equality check predicate on the "description_en" field. It's identical to DescriptionEnEQ.
+func DescriptionEn(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldDescriptionEn, v))
+}
+
 // Price applies equality check predicate on the "price" field. It's identical to PriceEQ.
 func Price(v float64) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldEQ(FieldPrice, v))
@@ -97,6 +107,11 @@ func ValidityUnit(v string) predicate.SubscriptionPlan {
 // Features applies equality check predicate on the "features" field. It's identical to FeaturesEQ.
 func Features(v string) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldEQ(FieldFeatures, v))
+}
+
+// FeaturesEn applies equality check predicate on the "features_en" field. It's identical to FeaturesEnEQ.
+func FeaturesEn(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldFeaturesEn, v))
 }
 
 // ProductName applies equality check predicate on the "product_name" field. It's identical to ProductNameEQ.
@@ -302,6 +317,136 @@ func DescriptionEqualFold(v string) predicate.SubscriptionPlan {
 // DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
 func DescriptionContainsFold(v string) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldContainsFold(FieldDescription, v))
+}
+
+// NameEnEQ applies the EQ predicate on the "name_en" field.
+func NameEnEQ(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldNameEn, v))
+}
+
+// NameEnNEQ applies the NEQ predicate on the "name_en" field.
+func NameEnNEQ(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNEQ(FieldNameEn, v))
+}
+
+// NameEnIn applies the In predicate on the "name_en" field.
+func NameEnIn(vs ...string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldIn(FieldNameEn, vs...))
+}
+
+// NameEnNotIn applies the NotIn predicate on the "name_en" field.
+func NameEnNotIn(vs ...string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNotIn(FieldNameEn, vs...))
+}
+
+// NameEnGT applies the GT predicate on the "name_en" field.
+func NameEnGT(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGT(FieldNameEn, v))
+}
+
+// NameEnGTE applies the GTE predicate on the "name_en" field.
+func NameEnGTE(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGTE(FieldNameEn, v))
+}
+
+// NameEnLT applies the LT predicate on the "name_en" field.
+func NameEnLT(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLT(FieldNameEn, v))
+}
+
+// NameEnLTE applies the LTE predicate on the "name_en" field.
+func NameEnLTE(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLTE(FieldNameEn, v))
+}
+
+// NameEnContains applies the Contains predicate on the "name_en" field.
+func NameEnContains(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldContains(FieldNameEn, v))
+}
+
+// NameEnHasPrefix applies the HasPrefix predicate on the "name_en" field.
+func NameEnHasPrefix(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldHasPrefix(FieldNameEn, v))
+}
+
+// NameEnHasSuffix applies the HasSuffix predicate on the "name_en" field.
+func NameEnHasSuffix(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldHasSuffix(FieldNameEn, v))
+}
+
+// NameEnEqualFold applies the EqualFold predicate on the "name_en" field.
+func NameEnEqualFold(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEqualFold(FieldNameEn, v))
+}
+
+// NameEnContainsFold applies the ContainsFold predicate on the "name_en" field.
+func NameEnContainsFold(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldContainsFold(FieldNameEn, v))
+}
+
+// DescriptionEnEQ applies the EQ predicate on the "description_en" field.
+func DescriptionEnEQ(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldDescriptionEn, v))
+}
+
+// DescriptionEnNEQ applies the NEQ predicate on the "description_en" field.
+func DescriptionEnNEQ(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNEQ(FieldDescriptionEn, v))
+}
+
+// DescriptionEnIn applies the In predicate on the "description_en" field.
+func DescriptionEnIn(vs ...string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldIn(FieldDescriptionEn, vs...))
+}
+
+// DescriptionEnNotIn applies the NotIn predicate on the "description_en" field.
+func DescriptionEnNotIn(vs ...string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNotIn(FieldDescriptionEn, vs...))
+}
+
+// DescriptionEnGT applies the GT predicate on the "description_en" field.
+func DescriptionEnGT(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGT(FieldDescriptionEn, v))
+}
+
+// DescriptionEnGTE applies the GTE predicate on the "description_en" field.
+func DescriptionEnGTE(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGTE(FieldDescriptionEn, v))
+}
+
+// DescriptionEnLT applies the LT predicate on the "description_en" field.
+func DescriptionEnLT(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLT(FieldDescriptionEn, v))
+}
+
+// DescriptionEnLTE applies the LTE predicate on the "description_en" field.
+func DescriptionEnLTE(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLTE(FieldDescriptionEn, v))
+}
+
+// DescriptionEnContains applies the Contains predicate on the "description_en" field.
+func DescriptionEnContains(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldContains(FieldDescriptionEn, v))
+}
+
+// DescriptionEnHasPrefix applies the HasPrefix predicate on the "description_en" field.
+func DescriptionEnHasPrefix(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldHasPrefix(FieldDescriptionEn, v))
+}
+
+// DescriptionEnHasSuffix applies the HasSuffix predicate on the "description_en" field.
+func DescriptionEnHasSuffix(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldHasSuffix(FieldDescriptionEn, v))
+}
+
+// DescriptionEnEqualFold applies the EqualFold predicate on the "description_en" field.
+func DescriptionEnEqualFold(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEqualFold(FieldDescriptionEn, v))
+}
+
+// DescriptionEnContainsFold applies the ContainsFold predicate on the "description_en" field.
+func DescriptionEnContainsFold(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldContainsFold(FieldDescriptionEn, v))
 }
 
 // PriceEQ applies the EQ predicate on the "price" field.
@@ -627,6 +772,71 @@ func FeaturesEqualFold(v string) predicate.SubscriptionPlan {
 // FeaturesContainsFold applies the ContainsFold predicate on the "features" field.
 func FeaturesContainsFold(v string) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldContainsFold(FieldFeatures, v))
+}
+
+// FeaturesEnEQ applies the EQ predicate on the "features_en" field.
+func FeaturesEnEQ(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldFeaturesEn, v))
+}
+
+// FeaturesEnNEQ applies the NEQ predicate on the "features_en" field.
+func FeaturesEnNEQ(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNEQ(FieldFeaturesEn, v))
+}
+
+// FeaturesEnIn applies the In predicate on the "features_en" field.
+func FeaturesEnIn(vs ...string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldIn(FieldFeaturesEn, vs...))
+}
+
+// FeaturesEnNotIn applies the NotIn predicate on the "features_en" field.
+func FeaturesEnNotIn(vs ...string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNotIn(FieldFeaturesEn, vs...))
+}
+
+// FeaturesEnGT applies the GT predicate on the "features_en" field.
+func FeaturesEnGT(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGT(FieldFeaturesEn, v))
+}
+
+// FeaturesEnGTE applies the GTE predicate on the "features_en" field.
+func FeaturesEnGTE(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGTE(FieldFeaturesEn, v))
+}
+
+// FeaturesEnLT applies the LT predicate on the "features_en" field.
+func FeaturesEnLT(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLT(FieldFeaturesEn, v))
+}
+
+// FeaturesEnLTE applies the LTE predicate on the "features_en" field.
+func FeaturesEnLTE(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLTE(FieldFeaturesEn, v))
+}
+
+// FeaturesEnContains applies the Contains predicate on the "features_en" field.
+func FeaturesEnContains(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldContains(FieldFeaturesEn, v))
+}
+
+// FeaturesEnHasPrefix applies the HasPrefix predicate on the "features_en" field.
+func FeaturesEnHasPrefix(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldHasPrefix(FieldFeaturesEn, v))
+}
+
+// FeaturesEnHasSuffix applies the HasSuffix predicate on the "features_en" field.
+func FeaturesEnHasSuffix(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldHasSuffix(FieldFeaturesEn, v))
+}
+
+// FeaturesEnEqualFold applies the EqualFold predicate on the "features_en" field.
+func FeaturesEnEqualFold(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEqualFold(FieldFeaturesEn, v))
+}
+
+// FeaturesEnContainsFold applies the ContainsFold predicate on the "features_en" field.
+func FeaturesEnContainsFold(v string) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldContainsFold(FieldFeaturesEn, v))
 }
 
 // ProductNameEQ applies the EQ predicate on the "product_name" field.

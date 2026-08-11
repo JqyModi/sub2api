@@ -37,6 +37,12 @@ func (SubscriptionPlan) Fields() []ent.Field {
 		field.String("description").
 			SchemaType(map[string]string{dialect.Postgres: "text"}).
 			Default(""),
+		field.String("name_en").
+			MaxLen(100).
+			Default(""),
+		field.String("description_en").
+			SchemaType(map[string]string{dialect.Postgres: "text"}).
+			Default(""),
 		field.Float("price").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,2)"}),
 		field.Float("original_price").
@@ -52,6 +58,9 @@ func (SubscriptionPlan) Fields() []ent.Field {
 			MaxLen(10).
 			Default("day"),
 		field.String("features").
+			SchemaType(map[string]string{dialect.Postgres: "text"}).
+			Default(""),
+		field.String("features_en").
 			SchemaType(map[string]string{dialect.Postgres: "text"}).
 			Default(""),
 		field.String("product_name").

@@ -48,6 +48,34 @@ func (_c *SubscriptionPlanCreate) SetNillableDescription(v *string) *Subscriptio
 	return _c
 }
 
+// SetNameEn sets the "name_en" field.
+func (_c *SubscriptionPlanCreate) SetNameEn(v string) *SubscriptionPlanCreate {
+	_c.mutation.SetNameEn(v)
+	return _c
+}
+
+// SetNillableNameEn sets the "name_en" field if the given value is not nil.
+func (_c *SubscriptionPlanCreate) SetNillableNameEn(v *string) *SubscriptionPlanCreate {
+	if v != nil {
+		_c.SetNameEn(*v)
+	}
+	return _c
+}
+
+// SetDescriptionEn sets the "description_en" field.
+func (_c *SubscriptionPlanCreate) SetDescriptionEn(v string) *SubscriptionPlanCreate {
+	_c.mutation.SetDescriptionEn(v)
+	return _c
+}
+
+// SetNillableDescriptionEn sets the "description_en" field if the given value is not nil.
+func (_c *SubscriptionPlanCreate) SetNillableDescriptionEn(v *string) *SubscriptionPlanCreate {
+	if v != nil {
+		_c.SetDescriptionEn(*v)
+	}
+	return _c
+}
+
 // SetPrice sets the "price" field.
 func (_c *SubscriptionPlanCreate) SetPrice(v float64) *SubscriptionPlanCreate {
 	_c.mutation.SetPrice(v)
@@ -120,6 +148,20 @@ func (_c *SubscriptionPlanCreate) SetFeatures(v string) *SubscriptionPlanCreate 
 func (_c *SubscriptionPlanCreate) SetNillableFeatures(v *string) *SubscriptionPlanCreate {
 	if v != nil {
 		_c.SetFeatures(*v)
+	}
+	return _c
+}
+
+// SetFeaturesEn sets the "features_en" field.
+func (_c *SubscriptionPlanCreate) SetFeaturesEn(v string) *SubscriptionPlanCreate {
+	_c.mutation.SetFeaturesEn(v)
+	return _c
+}
+
+// SetNillableFeaturesEn sets the "features_en" field if the given value is not nil.
+func (_c *SubscriptionPlanCreate) SetNillableFeaturesEn(v *string) *SubscriptionPlanCreate {
+	if v != nil {
+		_c.SetFeaturesEn(*v)
 	}
 	return _c
 }
@@ -261,6 +303,14 @@ func (_c *SubscriptionPlanCreate) defaults() {
 		v := subscriptionplan.DefaultDescription
 		_c.mutation.SetDescription(v)
 	}
+	if _, ok := _c.mutation.NameEn(); !ok {
+		v := subscriptionplan.DefaultNameEn
+		_c.mutation.SetNameEn(v)
+	}
+	if _, ok := _c.mutation.DescriptionEn(); !ok {
+		v := subscriptionplan.DefaultDescriptionEn
+		_c.mutation.SetDescriptionEn(v)
+	}
 	if _, ok := _c.mutation.Currency(); !ok {
 		v := subscriptionplan.DefaultCurrency
 		_c.mutation.SetCurrency(v)
@@ -276,6 +326,10 @@ func (_c *SubscriptionPlanCreate) defaults() {
 	if _, ok := _c.mutation.Features(); !ok {
 		v := subscriptionplan.DefaultFeatures
 		_c.mutation.SetFeatures(v)
+	}
+	if _, ok := _c.mutation.FeaturesEn(); !ok {
+		v := subscriptionplan.DefaultFeaturesEn
+		_c.mutation.SetFeaturesEn(v)
 	}
 	if _, ok := _c.mutation.ProductName(); !ok {
 		v := subscriptionplan.DefaultProductName
@@ -323,6 +377,17 @@ func (_c *SubscriptionPlanCreate) check() error {
 	if _, ok := _c.mutation.Description(); !ok {
 		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "SubscriptionPlan.description"`)}
 	}
+	if _, ok := _c.mutation.NameEn(); !ok {
+		return &ValidationError{Name: "name_en", err: errors.New(`ent: missing required field "SubscriptionPlan.name_en"`)}
+	}
+	if v, ok := _c.mutation.NameEn(); ok {
+		if err := subscriptionplan.NameEnValidator(v); err != nil {
+			return &ValidationError{Name: "name_en", err: fmt.Errorf(`ent: validator failed for field "SubscriptionPlan.name_en": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.DescriptionEn(); !ok {
+		return &ValidationError{Name: "description_en", err: errors.New(`ent: missing required field "SubscriptionPlan.description_en"`)}
+	}
 	if _, ok := _c.mutation.Price(); !ok {
 		return &ValidationError{Name: "price", err: errors.New(`ent: missing required field "SubscriptionPlan.price"`)}
 	}
@@ -347,6 +412,9 @@ func (_c *SubscriptionPlanCreate) check() error {
 	}
 	if _, ok := _c.mutation.Features(); !ok {
 		return &ValidationError{Name: "features", err: errors.New(`ent: missing required field "SubscriptionPlan.features"`)}
+	}
+	if _, ok := _c.mutation.FeaturesEn(); !ok {
+		return &ValidationError{Name: "features_en", err: errors.New(`ent: missing required field "SubscriptionPlan.features_en"`)}
 	}
 	if _, ok := _c.mutation.ProductName(); !ok {
 		return &ValidationError{Name: "product_name", err: errors.New(`ent: missing required field "SubscriptionPlan.product_name"`)}
@@ -423,6 +491,14 @@ func (_c *SubscriptionPlanCreate) createSpec() (*SubscriptionPlan, *sqlgraph.Cre
 		_spec.SetField(subscriptionplan.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
+	if value, ok := _c.mutation.NameEn(); ok {
+		_spec.SetField(subscriptionplan.FieldNameEn, field.TypeString, value)
+		_node.NameEn = value
+	}
+	if value, ok := _c.mutation.DescriptionEn(); ok {
+		_spec.SetField(subscriptionplan.FieldDescriptionEn, field.TypeString, value)
+		_node.DescriptionEn = value
+	}
 	if value, ok := _c.mutation.Price(); ok {
 		_spec.SetField(subscriptionplan.FieldPrice, field.TypeFloat64, value)
 		_node.Price = value
@@ -446,6 +522,10 @@ func (_c *SubscriptionPlanCreate) createSpec() (*SubscriptionPlan, *sqlgraph.Cre
 	if value, ok := _c.mutation.Features(); ok {
 		_spec.SetField(subscriptionplan.FieldFeatures, field.TypeString, value)
 		_node.Features = value
+	}
+	if value, ok := _c.mutation.FeaturesEn(); ok {
+		_spec.SetField(subscriptionplan.FieldFeaturesEn, field.TypeString, value)
+		_node.FeaturesEn = value
 	}
 	if value, ok := _c.mutation.ProductName(); ok {
 		_spec.SetField(subscriptionplan.FieldProductName, field.TypeString, value)
@@ -569,6 +649,30 @@ func (u *SubscriptionPlanUpsert) UpdateDescription() *SubscriptionPlanUpsert {
 	return u
 }
 
+// SetNameEn sets the "name_en" field.
+func (u *SubscriptionPlanUpsert) SetNameEn(v string) *SubscriptionPlanUpsert {
+	u.Set(subscriptionplan.FieldNameEn, v)
+	return u
+}
+
+// UpdateNameEn sets the "name_en" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsert) UpdateNameEn() *SubscriptionPlanUpsert {
+	u.SetExcluded(subscriptionplan.FieldNameEn)
+	return u
+}
+
+// SetDescriptionEn sets the "description_en" field.
+func (u *SubscriptionPlanUpsert) SetDescriptionEn(v string) *SubscriptionPlanUpsert {
+	u.Set(subscriptionplan.FieldDescriptionEn, v)
+	return u
+}
+
+// UpdateDescriptionEn sets the "description_en" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsert) UpdateDescriptionEn() *SubscriptionPlanUpsert {
+	u.SetExcluded(subscriptionplan.FieldDescriptionEn)
+	return u
+}
+
 // SetPrice sets the "price" field.
 func (u *SubscriptionPlanUpsert) SetPrice(v float64) *SubscriptionPlanUpsert {
 	u.Set(subscriptionplan.FieldPrice, v)
@@ -662,6 +766,18 @@ func (u *SubscriptionPlanUpsert) SetFeatures(v string) *SubscriptionPlanUpsert {
 // UpdateFeatures sets the "features" field to the value that was provided on create.
 func (u *SubscriptionPlanUpsert) UpdateFeatures() *SubscriptionPlanUpsert {
 	u.SetExcluded(subscriptionplan.FieldFeatures)
+	return u
+}
+
+// SetFeaturesEn sets the "features_en" field.
+func (u *SubscriptionPlanUpsert) SetFeaturesEn(v string) *SubscriptionPlanUpsert {
+	u.Set(subscriptionplan.FieldFeaturesEn, v)
+	return u
+}
+
+// UpdateFeaturesEn sets the "features_en" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsert) UpdateFeaturesEn() *SubscriptionPlanUpsert {
+	u.SetExcluded(subscriptionplan.FieldFeaturesEn)
 	return u
 }
 
@@ -849,6 +965,34 @@ func (u *SubscriptionPlanUpsertOne) UpdateDescription() *SubscriptionPlanUpsertO
 	})
 }
 
+// SetNameEn sets the "name_en" field.
+func (u *SubscriptionPlanUpsertOne) SetNameEn(v string) *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetNameEn(v)
+	})
+}
+
+// UpdateNameEn sets the "name_en" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertOne) UpdateNameEn() *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateNameEn()
+	})
+}
+
+// SetDescriptionEn sets the "description_en" field.
+func (u *SubscriptionPlanUpsertOne) SetDescriptionEn(v string) *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetDescriptionEn(v)
+	})
+}
+
+// UpdateDescriptionEn sets the "description_en" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertOne) UpdateDescriptionEn() *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateDescriptionEn()
+	})
+}
+
 // SetPrice sets the "price" field.
 func (u *SubscriptionPlanUpsertOne) SetPrice(v float64) *SubscriptionPlanUpsertOne {
 	return u.Update(func(s *SubscriptionPlanUpsert) {
@@ -958,6 +1102,20 @@ func (u *SubscriptionPlanUpsertOne) SetFeatures(v string) *SubscriptionPlanUpser
 func (u *SubscriptionPlanUpsertOne) UpdateFeatures() *SubscriptionPlanUpsertOne {
 	return u.Update(func(s *SubscriptionPlanUpsert) {
 		s.UpdateFeatures()
+	})
+}
+
+// SetFeaturesEn sets the "features_en" field.
+func (u *SubscriptionPlanUpsertOne) SetFeaturesEn(v string) *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetFeaturesEn(v)
+	})
+}
+
+// UpdateFeaturesEn sets the "features_en" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertOne) UpdateFeaturesEn() *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateFeaturesEn()
 	})
 }
 
@@ -1326,6 +1484,34 @@ func (u *SubscriptionPlanUpsertBulk) UpdateDescription() *SubscriptionPlanUpsert
 	})
 }
 
+// SetNameEn sets the "name_en" field.
+func (u *SubscriptionPlanUpsertBulk) SetNameEn(v string) *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetNameEn(v)
+	})
+}
+
+// UpdateNameEn sets the "name_en" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertBulk) UpdateNameEn() *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateNameEn()
+	})
+}
+
+// SetDescriptionEn sets the "description_en" field.
+func (u *SubscriptionPlanUpsertBulk) SetDescriptionEn(v string) *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetDescriptionEn(v)
+	})
+}
+
+// UpdateDescriptionEn sets the "description_en" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertBulk) UpdateDescriptionEn() *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateDescriptionEn()
+	})
+}
+
 // SetPrice sets the "price" field.
 func (u *SubscriptionPlanUpsertBulk) SetPrice(v float64) *SubscriptionPlanUpsertBulk {
 	return u.Update(func(s *SubscriptionPlanUpsert) {
@@ -1435,6 +1621,20 @@ func (u *SubscriptionPlanUpsertBulk) SetFeatures(v string) *SubscriptionPlanUpse
 func (u *SubscriptionPlanUpsertBulk) UpdateFeatures() *SubscriptionPlanUpsertBulk {
 	return u.Update(func(s *SubscriptionPlanUpsert) {
 		s.UpdateFeatures()
+	})
+}
+
+// SetFeaturesEn sets the "features_en" field.
+func (u *SubscriptionPlanUpsertBulk) SetFeaturesEn(v string) *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetFeaturesEn(v)
+	})
+}
+
+// UpdateFeaturesEn sets the "features_en" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertBulk) UpdateFeaturesEn() *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateFeaturesEn()
 	})
 }
 

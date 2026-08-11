@@ -57,11 +57,14 @@ func TestAdminSubscriptionPlansForResponseIncludesCompositeGroupInfo(t *testing.
 			GroupID:      7,
 			Name:         "All models",
 			Description:  "Composite access",
+			NameEn:       "All Models",
+			DescriptionEn: "Composite model access",
 			Price:        19.99,
 			Currency:     "CNY",
 			ValidityDays: 30,
 			ValidityUnit: "days",
 			Features:     "OpenAI\nClaude\nGemini\nGrok",
+			FeaturesEn:   "OpenAI access\nClaude access\nGemini access\nGrok access",
 			ProductName:  "Sub2API",
 			ForSale:      true,
 			MaxSales:    5,
@@ -102,6 +105,12 @@ func TestAdminSubscriptionPlansForResponseIncludesCompositeGroupInfo(t *testing.
 	// 静默清空套餐货币（PlanEditDialog 回传空串 → SetCurrency("")）。
 	if got[0].Currency != "CNY" {
 		t.Fatalf("expected currency to be preserved, got %q", got[0].Currency)
+	}
+	if got[0].NameEN != "All Models" || got[0].DescriptionEN != "Composite model access" {
+		t.Fatalf("expected localized name and description to be preserved, got %q / %q", got[0].NameEN, got[0].DescriptionEN)
+	}
+	if got[0].FeaturesEN != "OpenAI access\nClaude access\nGemini access\nGrok access" {
+		t.Fatalf("expected localized features to be preserved, got %q", got[0].FeaturesEN)
 	}
 	if got[0].SoldCount != 3 || got[0].RemainingSales == nil || *got[0].RemainingSales != 2 {
 		t.Fatalf("expected sales capacity to be preserved, got sold=%d remaining=%v", got[0].SoldCount, got[0].RemainingSales)

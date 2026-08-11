@@ -77,6 +77,34 @@ func (_u *SubscriptionPlanUpdate) SetNillableDescription(v *string) *Subscriptio
 	return _u
 }
 
+// SetNameEn sets the "name_en" field.
+func (_u *SubscriptionPlanUpdate) SetNameEn(v string) *SubscriptionPlanUpdate {
+	_u.mutation.SetNameEn(v)
+	return _u
+}
+
+// SetNillableNameEn sets the "name_en" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdate) SetNillableNameEn(v *string) *SubscriptionPlanUpdate {
+	if v != nil {
+		_u.SetNameEn(*v)
+	}
+	return _u
+}
+
+// SetDescriptionEn sets the "description_en" field.
+func (_u *SubscriptionPlanUpdate) SetDescriptionEn(v string) *SubscriptionPlanUpdate {
+	_u.mutation.SetDescriptionEn(v)
+	return _u
+}
+
+// SetNillableDescriptionEn sets the "description_en" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdate) SetNillableDescriptionEn(v *string) *SubscriptionPlanUpdate {
+	if v != nil {
+		_u.SetDescriptionEn(*v)
+	}
+	return _u
+}
+
 // SetPrice sets the "price" field.
 func (_u *SubscriptionPlanUpdate) SetPrice(v float64) *SubscriptionPlanUpdate {
 	_u.mutation.ResetPrice()
@@ -184,6 +212,20 @@ func (_u *SubscriptionPlanUpdate) SetFeatures(v string) *SubscriptionPlanUpdate 
 func (_u *SubscriptionPlanUpdate) SetNillableFeatures(v *string) *SubscriptionPlanUpdate {
 	if v != nil {
 		_u.SetFeatures(*v)
+	}
+	return _u
+}
+
+// SetFeaturesEn sets the "features_en" field.
+func (_u *SubscriptionPlanUpdate) SetFeaturesEn(v string) *SubscriptionPlanUpdate {
+	_u.mutation.SetFeaturesEn(v)
+	return _u
+}
+
+// SetNillableFeaturesEn sets the "features_en" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdate) SetNillableFeaturesEn(v *string) *SubscriptionPlanUpdate {
+	if v != nil {
+		_u.SetFeaturesEn(*v)
 	}
 	return _u
 }
@@ -333,6 +375,11 @@ func (_u *SubscriptionPlanUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "SubscriptionPlan.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.NameEn(); ok {
+		if err := subscriptionplan.NameEnValidator(v); err != nil {
+			return &ValidationError{Name: "name_en", err: fmt.Errorf(`ent: validator failed for field "SubscriptionPlan.name_en": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Currency(); ok {
 		if err := subscriptionplan.CurrencyValidator(v); err != nil {
 			return &ValidationError{Name: "currency", err: fmt.Errorf(`ent: validator failed for field "SubscriptionPlan.currency": %w`, err)}
@@ -385,6 +432,12 @@ func (_u *SubscriptionPlanUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if value, ok := _u.mutation.Description(); ok {
 		_spec.SetField(subscriptionplan.FieldDescription, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.NameEn(); ok {
+		_spec.SetField(subscriptionplan.FieldNameEn, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DescriptionEn(); ok {
+		_spec.SetField(subscriptionplan.FieldDescriptionEn, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.Price(); ok {
 		_spec.SetField(subscriptionplan.FieldPrice, field.TypeFloat64, value)
 	}
@@ -414,6 +467,9 @@ func (_u *SubscriptionPlanUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if value, ok := _u.mutation.Features(); ok {
 		_spec.SetField(subscriptionplan.FieldFeatures, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.FeaturesEn(); ok {
+		_spec.SetField(subscriptionplan.FieldFeaturesEn, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.ProductName(); ok {
 		_spec.SetField(subscriptionplan.FieldProductName, field.TypeString, value)
@@ -507,6 +563,34 @@ func (_u *SubscriptionPlanUpdateOne) SetDescription(v string) *SubscriptionPlanU
 func (_u *SubscriptionPlanUpdateOne) SetNillableDescription(v *string) *SubscriptionPlanUpdateOne {
 	if v != nil {
 		_u.SetDescription(*v)
+	}
+	return _u
+}
+
+// SetNameEn sets the "name_en" field.
+func (_u *SubscriptionPlanUpdateOne) SetNameEn(v string) *SubscriptionPlanUpdateOne {
+	_u.mutation.SetNameEn(v)
+	return _u
+}
+
+// SetNillableNameEn sets the "name_en" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdateOne) SetNillableNameEn(v *string) *SubscriptionPlanUpdateOne {
+	if v != nil {
+		_u.SetNameEn(*v)
+	}
+	return _u
+}
+
+// SetDescriptionEn sets the "description_en" field.
+func (_u *SubscriptionPlanUpdateOne) SetDescriptionEn(v string) *SubscriptionPlanUpdateOne {
+	_u.mutation.SetDescriptionEn(v)
+	return _u
+}
+
+// SetNillableDescriptionEn sets the "description_en" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdateOne) SetNillableDescriptionEn(v *string) *SubscriptionPlanUpdateOne {
+	if v != nil {
+		_u.SetDescriptionEn(*v)
 	}
 	return _u
 }
@@ -618,6 +702,20 @@ func (_u *SubscriptionPlanUpdateOne) SetFeatures(v string) *SubscriptionPlanUpda
 func (_u *SubscriptionPlanUpdateOne) SetNillableFeatures(v *string) *SubscriptionPlanUpdateOne {
 	if v != nil {
 		_u.SetFeatures(*v)
+	}
+	return _u
+}
+
+// SetFeaturesEn sets the "features_en" field.
+func (_u *SubscriptionPlanUpdateOne) SetFeaturesEn(v string) *SubscriptionPlanUpdateOne {
+	_u.mutation.SetFeaturesEn(v)
+	return _u
+}
+
+// SetNillableFeaturesEn sets the "features_en" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdateOne) SetNillableFeaturesEn(v *string) *SubscriptionPlanUpdateOne {
+	if v != nil {
+		_u.SetFeaturesEn(*v)
 	}
 	return _u
 }
@@ -780,6 +878,11 @@ func (_u *SubscriptionPlanUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "SubscriptionPlan.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.NameEn(); ok {
+		if err := subscriptionplan.NameEnValidator(v); err != nil {
+			return &ValidationError{Name: "name_en", err: fmt.Errorf(`ent: validator failed for field "SubscriptionPlan.name_en": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Currency(); ok {
 		if err := subscriptionplan.CurrencyValidator(v); err != nil {
 			return &ValidationError{Name: "currency", err: fmt.Errorf(`ent: validator failed for field "SubscriptionPlan.currency": %w`, err)}
@@ -849,6 +952,12 @@ func (_u *SubscriptionPlanUpdateOne) sqlSave(ctx context.Context) (_node *Subscr
 	if value, ok := _u.mutation.Description(); ok {
 		_spec.SetField(subscriptionplan.FieldDescription, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.NameEn(); ok {
+		_spec.SetField(subscriptionplan.FieldNameEn, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DescriptionEn(); ok {
+		_spec.SetField(subscriptionplan.FieldDescriptionEn, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.Price(); ok {
 		_spec.SetField(subscriptionplan.FieldPrice, field.TypeFloat64, value)
 	}
@@ -878,6 +987,9 @@ func (_u *SubscriptionPlanUpdateOne) sqlSave(ctx context.Context) (_node *Subscr
 	}
 	if value, ok := _u.mutation.Features(); ok {
 		_spec.SetField(subscriptionplan.FieldFeatures, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.FeaturesEn(); ok {
+		_spec.SetField(subscriptionplan.FieldFeaturesEn, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.ProductName(); ok {
 		_spec.SetField(subscriptionplan.FieldProductName, field.TypeString, value)

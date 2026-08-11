@@ -213,4 +213,28 @@ describe('PlanEditDialog', () => {
       per_user_limit: 1,
     }))
   })
+
+  it('saves English plan name, description, and features', async () => {
+    const wrapper = mountDialog({ groups: [groupFixture({ id: 10 })] })
+    const textInputs = wrapper.findAll('input[type="text"]')
+    const numberInputs = wrapper.findAll('input[type="number"]')
+    const textareas = wrapper.findAll('textarea')
+
+    await textInputs[0].setValue('Codex 轻量版')
+    await textInputs[1].setValue('Codex Starter')
+    await wrapper.find('select').setValue('10')
+    await textareas[0].setValue('适合轻度使用和初次体验')
+    await textareas[1].setValue('For light usage and first-time users')
+    await textareas[2].setValue('$35 标准用量额度\n每日最高 $20')
+    await textareas[3].setValue('$35 standard usage quota\nUp to $20 per day')
+    await numberInputs[0].setValue('7.99')
+    await numberInputs[2].setValue('30')
+    await wrapper.get('form').trigger('submit')
+
+    expect(adminPaymentAPI.createPlan).toHaveBeenCalledWith(expect.objectContaining({
+      name_en: 'Codex Starter',
+      description_en: 'For light usage and first-time users',
+      features_en: '$35 standard usage quota\nUp to $20 per day',
+    }))
+  })
 })

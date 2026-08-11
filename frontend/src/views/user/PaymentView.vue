@@ -103,7 +103,7 @@
                   <span :class="['rounded-md border px-2 py-0.5 text-xs font-medium', planBadgeClass]">
                     {{ platformLabel(selectedPlan.group_platform || '') }}
                   </span>
-                  <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedPlan.name }}</h3>
+                  <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedPlanContent.name }}</h3>
                 </div>
                 <!-- Price -->
                 <div class="flex items-baseline gap-2">
@@ -114,8 +114,8 @@
                   <span class="text-sm text-gray-500 dark:text-gray-400">/ {{ planValiditySuffix }}</span>
                 </div>
                 <!-- Description -->
-                <p v-if="selectedPlan.description" class="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-                  {{ selectedPlan.description }}
+                <p v-if="selectedPlanContent.description" class="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                  {{ selectedPlanContent.description }}
                 </p>
                 <!-- Rate + Limits grid -->
                 <div class="mt-3 grid grid-cols-2 gap-3">
@@ -289,6 +289,7 @@ import PaymentStatusPanel from '@/components/payment/PaymentStatusPanel.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { DEFAULT_PAYMENT_CURRENCY, formatPaymentAmount, normalizePaymentCurrency } from '@/components/payment/currency'
 import { planValiditySuffix as validitySuffixOf } from '@/components/payment/validity'
+import { localizedPlanContent } from '@/components/payment/localizedPlanContent'
 import type { PaymentMethodOption } from '@/components/payment/PaymentMethodSelector.vue'
 import { buildPaymentErrorToastMessage, describePaymentScenarioError } from './paymentUx'
 import { hasWechatResumeQuery, parseWechatResumeRoute, stripWechatResumeQuery } from './paymentWechatResume'
@@ -328,6 +329,9 @@ const activeTab = ref<'recharge' | 'subscription'>('recharge')
 const amount = ref<number | null>(null)
 const selectedMethod = ref('')
 const selectedPlan = ref<SubscriptionPlan | null>(null)
+const selectedPlanContent = computed(() => selectedPlan.value
+  ? localizedPlanContent(selectedPlan.value, String(i18n.locale.value))
+  : { name: '', description: '', features: [] })
 const previewImage = ref('')
 
 const paymentPhase = ref<'select' | 'paying'>('select')

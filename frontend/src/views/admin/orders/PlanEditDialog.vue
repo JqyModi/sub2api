@@ -21,6 +21,12 @@
         </div>
       </div>
 
+      <div>
+        <label class="input-label">{{ t('payment.admin.planNameEn') }}</label>
+        <input v-model="planForm.name_en" type="text" class="input" lang="en" />
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.translationFallbackHint') }}</p>
+      </div>
+
       <!-- Group Info Preview -->
       <div v-if="selectedGroupInfo" class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-dark-600 dark:bg-dark-800">
         <div class="mb-2 flex items-center gap-2">
@@ -33,7 +39,10 @@
         </div>
       </div>
 
-      <div><label class="input-label">{{ t('payment.admin.planDescription') }} <span class="text-red-500">*</span></label><textarea v-model="planForm.description" rows="2" class="input" required></textarea></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="input-label">{{ t('payment.admin.planDescription') }} <span class="text-red-500">*</span></label><textarea v-model="planForm.description" rows="3" class="input" required></textarea></div>
+        <div><label class="input-label">{{ t('payment.admin.planDescriptionEn') }}</label><textarea v-model="planForm.description_en" rows="3" class="input" lang="en"></textarea></div>
+      </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="input-label">{{ t('payment.admin.price') }} <span class="text-red-500">*</span></label>
@@ -71,10 +80,17 @@
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.zeroMeansUnlimited') }}</p>
         </div>
       </div>
-      <div>
-        <label class="input-label">{{ t('payment.admin.features') }}</label>
-        <textarea v-model="planFeaturesText" rows="3" class="input" :placeholder="t('payment.admin.featuresPlaceholder')"></textarea>
-        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.featuresHint') }}</p>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="input-label">{{ t('payment.admin.features') }}</label>
+          <textarea v-model="planFeaturesText" rows="4" class="input" :placeholder="t('payment.admin.featuresPlaceholder')"></textarea>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.featuresHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label">{{ t('payment.admin.featuresEn') }}</label>
+          <textarea v-model="planFeaturesTextEn" rows="4" class="input" lang="en" :placeholder="t('payment.admin.featuresPlaceholderEn')"></textarea>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.featuresHint') }}</p>
+        </div>
       </div>
       <div class="flex items-center gap-3">
         <label class="text-sm text-gray-700 dark:text-gray-300">{{ t('payment.admin.forSale') }}</label>
@@ -134,8 +150,9 @@ const { t } = useI18n()
 const appStore = useAppStore()
 
 const saving = ref(false)
-const planForm = reactive({ name: '', group_id: null as number | null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true, max_sales: 0, per_user_limit: 0 })
+const planForm = reactive({ name: '', name_en: '', group_id: null as number | null, description: '', description_en: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true, max_sales: 0, per_user_limit: 0 })
 const planFeaturesText = ref('')
+const planFeaturesTextEn = ref('')
 
 const validityUnitOptions = computed(() => [
   { value: 'days', label: t('payment.admin.days') },
@@ -187,21 +204,26 @@ const subscriptionCnyPreview = computed(() => {
 watch(() => props.show, (visible) => {
   if (!visible) return
   if (props.plan) {
-    Object.assign(planForm, { name: props.plan.name, group_id: props.plan.group_id, description: props.plan.description, price: props.plan.price, original_price: props.plan.original_price || 0, currency: props.plan.currency || '', validity_days: props.plan.validity_days, validity_unit: props.plan.validity_unit || 'days', sort_order: props.plan.sort_order || 0, for_sale: props.plan.for_sale, max_sales: props.plan.max_sales || 0, per_user_limit: props.plan.per_user_limit || 0 })
+    Object.assign(planForm, { name: props.plan.name, name_en: props.plan.name_en || '', group_id: props.plan.group_id, description: props.plan.description, description_en: props.plan.description_en || '', price: props.plan.price, original_price: props.plan.original_price || 0, currency: props.plan.currency || '', validity_days: props.plan.validity_days, validity_unit: props.plan.validity_unit || 'days', sort_order: props.plan.sort_order || 0, for_sale: props.plan.for_sale, max_sales: props.plan.max_sales || 0, per_user_limit: props.plan.per_user_limit || 0 })
     planFeaturesText.value = (props.plan.features || []).join('\n')
+    planFeaturesTextEn.value = (props.plan.features_en || []).join('\n')
   } else {
-    Object.assign(planForm, { name: '', group_id: null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true, max_sales: 0, per_user_limit: 0 })
+    Object.assign(planForm, { name: '', name_en: '', group_id: null, description: '', description_en: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true, max_sales: 0, per_user_limit: 0 })
     planFeaturesText.value = ''
+    planFeaturesTextEn.value = ''
   }
 })
 
 /** Build request payload with snake_case keys matching backend JSON tags */
 function buildPlanPayload() {
   const features = planFeaturesText.value.split('\n').map(f => f.trim()).filter(Boolean).join('\n')
+  const featuresEn = planFeaturesTextEn.value.split('\n').map(f => f.trim()).filter(Boolean).join('\n')
   return {
     name: planForm.name,
+    name_en: planForm.name_en.trim(),
     group_id: planForm.group_id,
     description: planForm.description,
+    description_en: planForm.description_en.trim(),
     price: planForm.price,
     original_price: planForm.original_price || 0,
     currency: planForm.currency.trim().toUpperCase(),
@@ -212,6 +234,7 @@ function buildPlanPayload() {
     max_sales: planForm.max_sales || 0,
     per_user_limit: planForm.per_user_limit || 0,
     features,
+    features_en: featuresEn,
   }
 }
 

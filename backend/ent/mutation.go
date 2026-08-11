@@ -40432,6 +40432,8 @@ type SubscriptionPlanMutation struct {
 	addgroup_id       *int64
 	name              *string
 	description       *string
+	name_en           *string
+	description_en    *string
 	price             *float64
 	addprice          *float64
 	original_price    *float64
@@ -40441,6 +40443,7 @@ type SubscriptionPlanMutation struct {
 	addvalidity_days  *int
 	validity_unit     *string
 	features          *string
+	features_en       *string
 	product_name      *string
 	for_sale          *bool
 	max_sales         *int
@@ -40681,6 +40684,78 @@ func (m *SubscriptionPlanMutation) OldDescription(ctx context.Context) (v string
 // ResetDescription resets all changes to the "description" field.
 func (m *SubscriptionPlanMutation) ResetDescription() {
 	m.description = nil
+}
+
+// SetNameEn sets the "name_en" field.
+func (m *SubscriptionPlanMutation) SetNameEn(s string) {
+	m.name_en = &s
+}
+
+// NameEn returns the value of the "name_en" field in the mutation.
+func (m *SubscriptionPlanMutation) NameEn() (r string, exists bool) {
+	v := m.name_en
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNameEn returns the old "name_en" field's value of the SubscriptionPlan entity.
+// If the SubscriptionPlan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionPlanMutation) OldNameEn(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNameEn is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNameEn requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNameEn: %w", err)
+	}
+	return oldValue.NameEn, nil
+}
+
+// ResetNameEn resets all changes to the "name_en" field.
+func (m *SubscriptionPlanMutation) ResetNameEn() {
+	m.name_en = nil
+}
+
+// SetDescriptionEn sets the "description_en" field.
+func (m *SubscriptionPlanMutation) SetDescriptionEn(s string) {
+	m.description_en = &s
+}
+
+// DescriptionEn returns the value of the "description_en" field in the mutation.
+func (m *SubscriptionPlanMutation) DescriptionEn() (r string, exists bool) {
+	v := m.description_en
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescriptionEn returns the old "description_en" field's value of the SubscriptionPlan entity.
+// If the SubscriptionPlan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionPlanMutation) OldDescriptionEn(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescriptionEn is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescriptionEn requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescriptionEn: %w", err)
+	}
+	return oldValue.DescriptionEn, nil
+}
+
+// ResetDescriptionEn resets all changes to the "description_en" field.
+func (m *SubscriptionPlanMutation) ResetDescriptionEn() {
+	m.description_en = nil
 }
 
 // SetPrice sets the "price" field.
@@ -40971,6 +41046,42 @@ func (m *SubscriptionPlanMutation) OldFeatures(ctx context.Context) (v string, e
 // ResetFeatures resets all changes to the "features" field.
 func (m *SubscriptionPlanMutation) ResetFeatures() {
 	m.features = nil
+}
+
+// SetFeaturesEn sets the "features_en" field.
+func (m *SubscriptionPlanMutation) SetFeaturesEn(s string) {
+	m.features_en = &s
+}
+
+// FeaturesEn returns the value of the "features_en" field in the mutation.
+func (m *SubscriptionPlanMutation) FeaturesEn() (r string, exists bool) {
+	v := m.features_en
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFeaturesEn returns the old "features_en" field's value of the SubscriptionPlan entity.
+// If the SubscriptionPlan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionPlanMutation) OldFeaturesEn(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFeaturesEn is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFeaturesEn requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFeaturesEn: %w", err)
+	}
+	return oldValue.FeaturesEn, nil
+}
+
+// ResetFeaturesEn resets all changes to the "features_en" field.
+func (m *SubscriptionPlanMutation) ResetFeaturesEn() {
+	m.features_en = nil
 }
 
 // SetProductName sets the "product_name" field.
@@ -41319,7 +41430,7 @@ func (m *SubscriptionPlanMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SubscriptionPlanMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 19)
 	if m.group_id != nil {
 		fields = append(fields, subscriptionplan.FieldGroupID)
 	}
@@ -41328,6 +41439,12 @@ func (m *SubscriptionPlanMutation) Fields() []string {
 	}
 	if m.description != nil {
 		fields = append(fields, subscriptionplan.FieldDescription)
+	}
+	if m.name_en != nil {
+		fields = append(fields, subscriptionplan.FieldNameEn)
+	}
+	if m.description_en != nil {
+		fields = append(fields, subscriptionplan.FieldDescriptionEn)
 	}
 	if m.price != nil {
 		fields = append(fields, subscriptionplan.FieldPrice)
@@ -41346,6 +41463,9 @@ func (m *SubscriptionPlanMutation) Fields() []string {
 	}
 	if m.features != nil {
 		fields = append(fields, subscriptionplan.FieldFeatures)
+	}
+	if m.features_en != nil {
+		fields = append(fields, subscriptionplan.FieldFeaturesEn)
 	}
 	if m.product_name != nil {
 		fields = append(fields, subscriptionplan.FieldProductName)
@@ -41382,6 +41502,10 @@ func (m *SubscriptionPlanMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case subscriptionplan.FieldDescription:
 		return m.Description()
+	case subscriptionplan.FieldNameEn:
+		return m.NameEn()
+	case subscriptionplan.FieldDescriptionEn:
+		return m.DescriptionEn()
 	case subscriptionplan.FieldPrice:
 		return m.Price()
 	case subscriptionplan.FieldOriginalPrice:
@@ -41394,6 +41518,8 @@ func (m *SubscriptionPlanMutation) Field(name string) (ent.Value, bool) {
 		return m.ValidityUnit()
 	case subscriptionplan.FieldFeatures:
 		return m.Features()
+	case subscriptionplan.FieldFeaturesEn:
+		return m.FeaturesEn()
 	case subscriptionplan.FieldProductName:
 		return m.ProductName()
 	case subscriptionplan.FieldForSale:
@@ -41423,6 +41549,10 @@ func (m *SubscriptionPlanMutation) OldField(ctx context.Context, name string) (e
 		return m.OldName(ctx)
 	case subscriptionplan.FieldDescription:
 		return m.OldDescription(ctx)
+	case subscriptionplan.FieldNameEn:
+		return m.OldNameEn(ctx)
+	case subscriptionplan.FieldDescriptionEn:
+		return m.OldDescriptionEn(ctx)
 	case subscriptionplan.FieldPrice:
 		return m.OldPrice(ctx)
 	case subscriptionplan.FieldOriginalPrice:
@@ -41435,6 +41565,8 @@ func (m *SubscriptionPlanMutation) OldField(ctx context.Context, name string) (e
 		return m.OldValidityUnit(ctx)
 	case subscriptionplan.FieldFeatures:
 		return m.OldFeatures(ctx)
+	case subscriptionplan.FieldFeaturesEn:
+		return m.OldFeaturesEn(ctx)
 	case subscriptionplan.FieldProductName:
 		return m.OldProductName(ctx)
 	case subscriptionplan.FieldForSale:
@@ -41479,6 +41611,20 @@ func (m *SubscriptionPlanMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetDescription(v)
 		return nil
+	case subscriptionplan.FieldNameEn:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNameEn(v)
+		return nil
+	case subscriptionplan.FieldDescriptionEn:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescriptionEn(v)
+		return nil
 	case subscriptionplan.FieldPrice:
 		v, ok := value.(float64)
 		if !ok {
@@ -41520,6 +41666,13 @@ func (m *SubscriptionPlanMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetFeatures(v)
+		return nil
+	case subscriptionplan.FieldFeaturesEn:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFeaturesEn(v)
 		return nil
 	case subscriptionplan.FieldProductName:
 		v, ok := value.(string)
@@ -41724,6 +41877,12 @@ func (m *SubscriptionPlanMutation) ResetField(name string) error {
 	case subscriptionplan.FieldDescription:
 		m.ResetDescription()
 		return nil
+	case subscriptionplan.FieldNameEn:
+		m.ResetNameEn()
+		return nil
+	case subscriptionplan.FieldDescriptionEn:
+		m.ResetDescriptionEn()
+		return nil
 	case subscriptionplan.FieldPrice:
 		m.ResetPrice()
 		return nil
@@ -41741,6 +41900,9 @@ func (m *SubscriptionPlanMutation) ResetField(name string) error {
 		return nil
 	case subscriptionplan.FieldFeatures:
 		m.ResetFeatures()
+		return nil
+	case subscriptionplan.FieldFeaturesEn:
+		m.ResetFeaturesEn()
 		return nil
 	case subscriptionplan.FieldProductName:
 		m.ResetProductName()

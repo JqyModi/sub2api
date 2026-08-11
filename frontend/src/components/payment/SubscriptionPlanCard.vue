@@ -15,13 +15,13 @@
       <div class="mb-3 flex items-start justify-between gap-2">
         <div class="min-w-0 flex-1">
           <h3
-            :title="plan.name"
+            :title="content.name"
             class="h-12 min-w-0 break-words [overflow-wrap:anywhere] text-base font-bold leading-6 text-gray-900 dark:text-white line-clamp-2"
           >
-            {{ plan.name }}
+            {{ content.name }}
           </h3>
-          <p v-if="plan.description" class="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-dark-400 line-clamp-2">
-            {{ plan.description }}
+          <p v-if="content.description" class="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-dark-400 line-clamp-2">
+            {{ content.description }}
           </p>
         </div>
         <div class="shrink-0 text-right">
@@ -81,8 +81,8 @@
       </div>
 
       <!-- Features list (compact) -->
-      <div v-if="plan.features.length > 0" class="mb-3 space-y-1">
-        <div v-for="feature in plan.features" :key="feature" class="flex items-start gap-1.5">
+      <div v-if="content.features.length > 0" class="mb-3 space-y-1">
+        <div v-for="feature in content.features" :key="feature" class="flex items-start gap-1.5">
           <svg :class="['mt-0.5 h-3.5 w-3.5 flex-shrink-0', iconClass]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
           </svg>
@@ -117,6 +117,7 @@ import type { UserSubscription } from '@/types'
 import { useAppStore } from '@/stores/app'
 import { hasPeakRate as groupHasPeakRate, formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
 import { planValiditySuffix } from './validity'
+import { localizedPlanContent } from './localizedPlanContent'
 import { currencySymbol } from '@/components/payment/currency'
 import {
   platformAccentBarClass,
@@ -131,7 +132,9 @@ import {
 
 const props = defineProps<{ plan: SubscriptionPlan; activeSubscriptions?: UserSubscription[] }>()
 const emit = defineEmits<{ select: [plan: SubscriptionPlan] }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+const content = computed(() => localizedPlanContent(props.plan, String(locale.value)))
 
 const platform = computed(() => props.plan.group_platform || '')
 const isRenewal = computed(() =>

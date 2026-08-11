@@ -19,6 +19,10 @@ const (
 	FieldName = "name"
 	// FieldDescription holds the string denoting the description field in the database.
 	FieldDescription = "description"
+	// FieldNameEn holds the string denoting the name_en field in the database.
+	FieldNameEn = "name_en"
+	// FieldDescriptionEn holds the string denoting the description_en field in the database.
+	FieldDescriptionEn = "description_en"
 	// FieldPrice holds the string denoting the price field in the database.
 	FieldPrice = "price"
 	// FieldOriginalPrice holds the string denoting the original_price field in the database.
@@ -31,6 +35,8 @@ const (
 	FieldValidityUnit = "validity_unit"
 	// FieldFeatures holds the string denoting the features field in the database.
 	FieldFeatures = "features"
+	// FieldFeaturesEn holds the string denoting the features_en field in the database.
+	FieldFeaturesEn = "features_en"
 	// FieldProductName holds the string denoting the product_name field in the database.
 	FieldProductName = "product_name"
 	// FieldForSale holds the string denoting the for_sale field in the database.
@@ -55,12 +61,15 @@ var Columns = []string{
 	FieldGroupID,
 	FieldName,
 	FieldDescription,
+	FieldNameEn,
+	FieldDescriptionEn,
 	FieldPrice,
 	FieldOriginalPrice,
 	FieldCurrency,
 	FieldValidityDays,
 	FieldValidityUnit,
 	FieldFeatures,
+	FieldFeaturesEn,
 	FieldProductName,
 	FieldForSale,
 	FieldMaxSales,
@@ -85,6 +94,12 @@ var (
 	NameValidator func(string) error
 	// DefaultDescription holds the default value on creation for the "description" field.
 	DefaultDescription string
+	// DefaultNameEn holds the default value on creation for the "name_en" field.
+	DefaultNameEn string
+	// NameEnValidator is a validator for the "name_en" field. It is called by the builders before save.
+	NameEnValidator func(string) error
+	// DefaultDescriptionEn holds the default value on creation for the "description_en" field.
+	DefaultDescriptionEn string
 	// DefaultCurrency holds the default value on creation for the "currency" field.
 	DefaultCurrency string
 	// CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
@@ -97,6 +112,8 @@ var (
 	ValidityUnitValidator func(string) error
 	// DefaultFeatures holds the default value on creation for the "features" field.
 	DefaultFeatures string
+	// DefaultFeaturesEn holds the default value on creation for the "features_en" field.
+	DefaultFeaturesEn string
 	// DefaultProductName holds the default value on creation for the "product_name" field.
 	DefaultProductName string
 	// ProductNameValidator is a validator for the "product_name" field. It is called by the builders before save.
@@ -144,6 +161,16 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDescription, opts...).ToFunc()
 }
 
+// ByNameEn orders the results by the name_en field.
+func ByNameEn(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNameEn, opts...).ToFunc()
+}
+
+// ByDescriptionEn orders the results by the description_en field.
+func ByDescriptionEn(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDescriptionEn, opts...).ToFunc()
+}
+
 // ByPrice orders the results by the price field.
 func ByPrice(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPrice, opts...).ToFunc()
@@ -172,6 +199,11 @@ func ByValidityUnit(opts ...sql.OrderTermOption) OrderOption {
 // ByFeatures orders the results by the features field.
 func ByFeatures(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFeatures, opts...).ToFunc()
+}
+
+// ByFeaturesEn orders the results by the features_en field.
+func ByFeaturesEn(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFeaturesEn, opts...).ToFunc()
 }
 
 // ByProductName orders the results by the product_name field.

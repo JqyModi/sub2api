@@ -308,12 +308,15 @@ type AdminSubscriptionPlanResult struct {
 	ModelScopes     []string  `json:"supported_model_scopes,omitempty"`
 	Name            string    `json:"name"`
 	Description     string    `json:"description"`
+	NameEN          string    `json:"name_en"`
+	DescriptionEN   string    `json:"description_en"`
 	Price           float64   `json:"price"`
 	OriginalPrice   *float64  `json:"original_price,omitempty"`
 	Currency        string    `json:"currency,omitempty"`
 	ValidityDays    int       `json:"validity_days"`
 	ValidityUnit    string    `json:"validity_unit"`
 	Features        string    `json:"features"`
+	FeaturesEN      string    `json:"features_en"`
 	ProductName     string    `json:"product_name"`
 	ForSale         bool      `json:"for_sale"`
 	MaxSales        int       `json:"max_sales"`
@@ -350,12 +353,15 @@ func adminSubscriptionPlansForResponse(plans []*dbent.SubscriptionPlan, groupInf
 			ModelScopes:     gi.ModelScopes,
 			Name:            p.Name,
 			Description:     p.Description,
+			NameEN:          p.NameEn,
+			DescriptionEN:   p.DescriptionEn,
 			Price:           p.Price,
 			OriginalPrice:   p.OriginalPrice,
 			Currency:        p.Currency,
 			ValidityDays:    p.ValidityDays,
 			ValidityUnit:    p.ValidityUnit,
 			Features:        p.Features,
+			FeaturesEN:      p.FeaturesEn,
 			ProductName:     p.ProductName,
 			ForSale:         p.ForSale,
 			MaxSales:        p.MaxSales,

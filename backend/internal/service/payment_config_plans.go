@@ -153,8 +153,9 @@ func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanReq
 	}
 	b := s.entClient.SubscriptionPlan.Create().
 		SetGroupID(req.GroupID).SetName(req.Name).SetDescription(req.Description).
+		SetNameEn(req.NameEN).SetDescriptionEn(req.DescriptionEN).
 		SetPrice(req.Price).SetCurrency(currency).SetValidityDays(req.ValidityDays).SetValidityUnit(req.ValidityUnit).
-		SetFeatures(req.Features).SetProductName(req.ProductName).
+		SetFeatures(req.Features).SetFeaturesEn(req.FeaturesEN).SetProductName(req.ProductName).
 		SetForSale(req.ForSale).SetMaxSales(req.MaxSales).SetPerUserLimit(req.PerUserLimit).SetSortOrder(req.SortOrder)
 	if req.OriginalPrice != nil {
 		b.SetOriginalPrice(*req.OriginalPrice)
@@ -179,6 +180,12 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 	if req.Description != nil {
 		u.SetDescription(*req.Description)
 	}
+	if req.NameEN != nil {
+		u.SetNameEn(*req.NameEN)
+	}
+	if req.DescriptionEN != nil {
+		u.SetDescriptionEn(*req.DescriptionEN)
+	}
 	if req.Price != nil {
 		u.SetPrice(*req.Price)
 	}
@@ -200,6 +207,9 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 	}
 	if req.Features != nil {
 		u.SetFeatures(*req.Features)
+	}
+	if req.FeaturesEN != nil {
+		u.SetFeaturesEn(*req.FeaturesEN)
 	}
 	if req.ProductName != nil {
 		u.SetProductName(*req.ProductName)

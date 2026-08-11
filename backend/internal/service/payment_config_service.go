@@ -166,12 +166,15 @@ type CreatePlanRequest struct {
 	GroupID       int64    `json:"group_id"`
 	Name          string   `json:"name"`
 	Description   string   `json:"description"`
+	NameEN        string   `json:"name_en"`
+	DescriptionEN string   `json:"description_en"`
 	Price         float64  `json:"price"`
 	OriginalPrice *float64 `json:"original_price"`
 	Currency      string   `json:"currency"`
 	ValidityDays  int      `json:"validity_days"`
 	ValidityUnit  string   `json:"validity_unit"`
 	Features      string   `json:"features"`
+	FeaturesEN    string   `json:"features_en"`
 	ProductName   string   `json:"product_name"`
 	ForSale       bool     `json:"for_sale"`
 	MaxSales      int      `json:"max_sales"`
@@ -183,12 +186,15 @@ type UpdatePlanRequest struct {
 	GroupID       *int64   `json:"group_id"`
 	Name          *string  `json:"name"`
 	Description   *string  `json:"description"`
+	NameEN        *string  `json:"name_en"`
+	DescriptionEN *string  `json:"description_en"`
 	Price         *float64 `json:"price"`
 	OriginalPrice *float64 `json:"original_price"`
 	Currency      *string  `json:"currency"`
 	ValidityDays  *int     `json:"validity_days"`
 	ValidityUnit  *string  `json:"validity_unit"`
 	Features      *string  `json:"features"`
+	FeaturesEN    *string  `json:"features_en"`
 	ProductName   *string  `json:"product_name"`
 	ForSale       *bool    `json:"for_sale"`
 	MaxSales      *int     `json:"max_sales"`

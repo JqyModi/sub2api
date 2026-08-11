@@ -23,6 +23,10 @@ type SubscriptionPlan struct {
 	Name string `json:"name,omitempty"`
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
+	// NameEn holds the value of the "name_en" field.
+	NameEn string `json:"name_en,omitempty"`
+	// DescriptionEn holds the value of the "description_en" field.
+	DescriptionEn string `json:"description_en,omitempty"`
 	// Price holds the value of the "price" field.
 	Price float64 `json:"price,omitempty"`
 	// OriginalPrice holds the value of the "original_price" field.
@@ -35,6 +39,8 @@ type SubscriptionPlan struct {
 	ValidityUnit string `json:"validity_unit,omitempty"`
 	// Features holds the value of the "features" field.
 	Features string `json:"features,omitempty"`
+	// FeaturesEn holds the value of the "features_en" field.
+	FeaturesEn string `json:"features_en,omitempty"`
 	// ProductName holds the value of the "product_name" field.
 	ProductName string `json:"product_name,omitempty"`
 	// ForSale holds the value of the "for_sale" field.
@@ -63,7 +69,7 @@ func (*SubscriptionPlan) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case subscriptionplan.FieldID, subscriptionplan.FieldGroupID, subscriptionplan.FieldValidityDays, subscriptionplan.FieldMaxSales, subscriptionplan.FieldPerUserLimit, subscriptionplan.FieldSortOrder:
 			values[i] = new(sql.NullInt64)
-		case subscriptionplan.FieldName, subscriptionplan.FieldDescription, subscriptionplan.FieldCurrency, subscriptionplan.FieldValidityUnit, subscriptionplan.FieldFeatures, subscriptionplan.FieldProductName:
+		case subscriptionplan.FieldName, subscriptionplan.FieldDescription, subscriptionplan.FieldNameEn, subscriptionplan.FieldDescriptionEn, subscriptionplan.FieldCurrency, subscriptionplan.FieldValidityUnit, subscriptionplan.FieldFeatures, subscriptionplan.FieldFeaturesEn, subscriptionplan.FieldProductName:
 			values[i] = new(sql.NullString)
 		case subscriptionplan.FieldCreatedAt, subscriptionplan.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -106,6 +112,18 @@ func (_m *SubscriptionPlan) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Description = value.String
 			}
+		case subscriptionplan.FieldNameEn:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field name_en", values[i])
+			} else if value.Valid {
+				_m.NameEn = value.String
+			}
+		case subscriptionplan.FieldDescriptionEn:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field description_en", values[i])
+			} else if value.Valid {
+				_m.DescriptionEn = value.String
+			}
 		case subscriptionplan.FieldPrice:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
 				return fmt.Errorf("unexpected type %T for field price", values[i])
@@ -142,6 +160,12 @@ func (_m *SubscriptionPlan) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field features", values[i])
 			} else if value.Valid {
 				_m.Features = value.String
+			}
+		case subscriptionplan.FieldFeaturesEn:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field features_en", values[i])
+			} else if value.Valid {
+				_m.FeaturesEn = value.String
 			}
 		case subscriptionplan.FieldProductName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -230,6 +254,12 @@ func (_m *SubscriptionPlan) String() string {
 	builder.WriteString("description=")
 	builder.WriteString(_m.Description)
 	builder.WriteString(", ")
+	builder.WriteString("name_en=")
+	builder.WriteString(_m.NameEn)
+	builder.WriteString(", ")
+	builder.WriteString("description_en=")
+	builder.WriteString(_m.DescriptionEn)
+	builder.WriteString(", ")
 	builder.WriteString("price=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Price))
 	builder.WriteString(", ")
@@ -249,6 +279,9 @@ func (_m *SubscriptionPlan) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("features=")
 	builder.WriteString(_m.Features)
+	builder.WriteString(", ")
+	builder.WriteString("features_en=")
+	builder.WriteString(_m.FeaturesEn)
 	builder.WriteString(", ")
 	builder.WriteString("product_name=")
 	builder.WriteString(_m.ProductName)

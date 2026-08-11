@@ -124,6 +124,8 @@ export interface SubscriptionPlan {
   supported_model_scopes?: string[]
   name: string
   description: string
+  name_en?: string
+  description_en?: string
   price: number
   original_price?: number
   /** Display-only ISO 4217 currency label (e.g. "NZD"); empty means no label */
@@ -132,6 +134,7 @@ export interface SubscriptionPlan {
   validity_unit: string
   /** Stored as JSON string in backend; API layer should parse before use */
   features: string[]
+  features_en?: string[]
   for_sale: boolean
   /** 0 means unlimited. */
   max_sales: number

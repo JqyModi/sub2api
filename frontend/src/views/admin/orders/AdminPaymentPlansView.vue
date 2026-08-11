@@ -168,11 +168,14 @@ async function loadPlans() {
   try {
     const res = await adminPaymentAPI.getPlans()
     // Backend returns features as newline-separated string; parse to array
-    plans.value = (res.data || []).map((p: Omit<SubscriptionPlan, 'features'> & { features: string | string[] }) => ({
+    plans.value = (res.data || []).map((p: Omit<SubscriptionPlan, 'features' | 'features_en'> & { features: string | string[]; features_en?: string | string[] }) => ({
       ...p,
       features: typeof p.features === 'string'
         ? p.features.split('\n').map((f: string) => f.trim()).filter(Boolean)
         : (p.features || []),
+      features_en: typeof p.features_en === 'string'
+        ? p.features_en.split('\n').map((f: string) => f.trim()).filter(Boolean)
+        : (p.features_en || []),
     }))
   }
   catch (err: unknown) { appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error'))) }
