@@ -49,6 +49,10 @@ func (s *PaymentService) GetDashboardStats(ctx context.Context, days int) (*Dash
 	st.DailySeries = buildDailySeries(orders, since, days)
 	st.PaymentMethods = buildMethodDistribution(orders)
 	st.TopUsers = buildTopUsers(orders)
+	st.GrowthFunnel, err = s.getGrowthFunnelStats(ctx, since)
+	if err != nil {
+		return nil, err
+	}
 
 	return st, nil
 }

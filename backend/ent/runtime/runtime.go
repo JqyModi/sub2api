@@ -22,6 +22,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/compositemodelroute"
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/growthevent"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
@@ -1181,6 +1182,58 @@ func init() {
 	groupDescReasoningEffortMappings := groupFields[48].Descriptor()
 	// group.DefaultReasoningEffortMappings holds the default value on creation for the reasoning_effort_mappings field.
 	group.DefaultReasoningEffortMappings = groupDescReasoningEffortMappings.Default.([]domain.ReasoningEffortMapping)
+	growtheventFields := schema.GrowthEvent{}.Fields()
+	_ = growtheventFields
+	// growtheventDescEventType is the schema descriptor for event_type field.
+	growtheventDescEventType := growtheventFields[0].Descriptor()
+	// growthevent.EventTypeValidator is a validator for the "event_type" field. It is called by the builders before save.
+	growthevent.EventTypeValidator = growtheventDescEventType.Validators[0].(func(string) error)
+	// growtheventDescCampaignID is the schema descriptor for campaign_id field.
+	growtheventDescCampaignID := growtheventFields[1].Descriptor()
+	// growthevent.DefaultCampaignID holds the default value on creation for the campaign_id field.
+	growthevent.DefaultCampaignID = growtheventDescCampaignID.Default.(string)
+	// growthevent.CampaignIDValidator is a validator for the "campaign_id" field. It is called by the builders before save.
+	growthevent.CampaignIDValidator = growtheventDescCampaignID.Validators[0].(func(string) error)
+	// growtheventDescPlatform is the schema descriptor for platform field.
+	growtheventDescPlatform := growtheventFields[2].Descriptor()
+	// growthevent.DefaultPlatform holds the default value on creation for the platform field.
+	growthevent.DefaultPlatform = growtheventDescPlatform.Default.(string)
+	// growthevent.PlatformValidator is a validator for the "platform" field. It is called by the builders before save.
+	growthevent.PlatformValidator = growtheventDescPlatform.Validators[0].(func(string) error)
+	// growtheventDescAppVersion is the schema descriptor for app_version field.
+	growtheventDescAppVersion := growtheventFields[3].Descriptor()
+	// growthevent.DefaultAppVersion holds the default value on creation for the app_version field.
+	growthevent.DefaultAppVersion = growtheventDescAppVersion.Default.(string)
+	// growthevent.AppVersionValidator is a validator for the "app_version" field. It is called by the builders before save.
+	growthevent.AppVersionValidator = growtheventDescAppVersion.Validators[0].(func(string) error)
+	// growtheventDescSessionHash is the schema descriptor for session_hash field.
+	growtheventDescSessionHash := growtheventFields[4].Descriptor()
+	// growthevent.DefaultSessionHash holds the default value on creation for the session_hash field.
+	growthevent.DefaultSessionHash = growtheventDescSessionHash.Default.(string)
+	// growthevent.SessionHashValidator is a validator for the "session_hash" field. It is called by the builders before save.
+	growthevent.SessionHashValidator = growtheventDescSessionHash.Validators[0].(func(string) error)
+	// growtheventDescPaymentProvider is the schema descriptor for payment_provider field.
+	growtheventDescPaymentProvider := growtheventFields[7].Descriptor()
+	// growthevent.DefaultPaymentProvider holds the default value on creation for the payment_provider field.
+	growthevent.DefaultPaymentProvider = growtheventDescPaymentProvider.Default.(string)
+	// growthevent.PaymentProviderValidator is a validator for the "payment_provider" field. It is called by the builders before save.
+	growthevent.PaymentProviderValidator = growtheventDescPaymentProvider.Validators[0].(func(string) error)
+	// growtheventDescResult is the schema descriptor for result field.
+	growtheventDescResult := growtheventFields[8].Descriptor()
+	// growthevent.DefaultResult holds the default value on creation for the result field.
+	growthevent.DefaultResult = growtheventDescResult.Default.(string)
+	// growthevent.ResultValidator is a validator for the "result" field. It is called by the builders before save.
+	growthevent.ResultValidator = growtheventDescResult.Validators[0].(func(string) error)
+	// growtheventDescErrorCode is the schema descriptor for error_code field.
+	growtheventDescErrorCode := growtheventFields[9].Descriptor()
+	// growthevent.DefaultErrorCode holds the default value on creation for the error_code field.
+	growthevent.DefaultErrorCode = growtheventDescErrorCode.Default.(string)
+	// growthevent.ErrorCodeValidator is a validator for the "error_code" field. It is called by the builders before save.
+	growthevent.ErrorCodeValidator = growtheventDescErrorCode.Validators[0].(func(string) error)
+	// growtheventDescCreatedAt is the schema descriptor for created_at field.
+	growtheventDescCreatedAt := growtheventFields[10].Descriptor()
+	// growthevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	growthevent.DefaultCreatedAt = growtheventDescCreatedAt.Default.(func() time.Time)
 	idempotencyrecordMixin := schema.IdempotencyRecord{}.Mixin()
 	idempotencyrecordMixinFields0 := idempotencyrecordMixin[0].Fields()
 	_ = idempotencyrecordMixinFields0

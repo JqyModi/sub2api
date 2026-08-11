@@ -994,6 +994,49 @@ var (
 			},
 		},
 	}
+	// GrowthEventsColumns holds the columns for the "growth_events" table.
+	GrowthEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "event_type", Type: field.TypeString, Size: 64},
+		{Name: "campaign_id", Type: field.TypeString, Size: 100, Default: ""},
+		{Name: "platform", Type: field.TypeString, Size: 32, Default: ""},
+		{Name: "app_version", Type: field.TypeString, Size: 32, Default: ""},
+		{Name: "session_hash", Type: field.TypeString, Size: 64, Default: ""},
+		{Name: "user_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "plan_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "payment_provider", Type: field.TypeString, Size: 32, Default: ""},
+		{Name: "result", Type: field.TypeString, Size: 32, Default: "success"},
+		{Name: "error_code", Type: field.TypeString, Size: 100, Default: ""},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// GrowthEventsTable holds the schema information for the "growth_events" table.
+	GrowthEventsTable = &schema.Table{
+		Name:       "growth_events",
+		Columns:    GrowthEventsColumns,
+		PrimaryKey: []*schema.Column{GrowthEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "growthevent_event_type_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{GrowthEventsColumns[1], GrowthEventsColumns[11]},
+			},
+			{
+				Name:    "growthevent_campaign_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{GrowthEventsColumns[2], GrowthEventsColumns[11]},
+			},
+			{
+				Name:    "growthevent_session_hash",
+				Unique:  false,
+				Columns: []*schema.Column{GrowthEventsColumns[5]},
+			},
+			{
+				Name:    "growthevent_user_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{GrowthEventsColumns[6], GrowthEventsColumns[11]},
+			},
+		},
+	}
 	// IdempotencyRecordsColumns holds the columns for the "idempotency_records" table.
 	IdempotencyRecordsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -2082,6 +2125,7 @@ var (
 		CompositeModelRoutesTable,
 		ErrorPassthroughRulesTable,
 		GroupsTable,
+		GrowthEventsTable,
 		IdempotencyRecordsTable,
 		IdentityAdoptionDecisionsTable,
 		PaymentAuditLogsTable,
@@ -2172,6 +2216,9 @@ func init() {
 	}
 	GroupsTable.Annotation = &entsql.Annotation{
 		Table: "groups",
+	}
+	GrowthEventsTable.Annotation = &entsql.Annotation{
+		Table: "growth_events",
 	}
 	IdempotencyRecordsTable.Annotation = &entsql.Annotation{
 		Table: "idempotency_records",

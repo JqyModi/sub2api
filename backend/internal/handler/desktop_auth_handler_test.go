@@ -24,7 +24,7 @@ func TestDesktopAuthHTTPFlow(t *testing.T) {
 	reader := &desktopAuthHandlerSubscriptionReader{subscriptions: []service.UserSubscription{{
 		ID: 9, UserID: 42, GroupID: 7, ExpiresAt: time.Now().Add(24 * time.Hour),
 	}}}
-	h := NewDesktopAuthHandler(service.NewDesktopAuthService(store, issuer, reader))
+	h := NewDesktopAuthHandler(service.NewDesktopAuthService(store, issuer, reader), nil)
 	router := gin.New()
 	router.POST("/api/v1/desktop-auth/sessions", h.Start)
 	router.POST("/api/v1/desktop-auth/token", h.PollToken)
@@ -81,7 +81,7 @@ func TestDesktopAuthHTTPFlowSelectsSubscription(t *testing.T) {
 		{ID: 20, UserID: 42, GroupID: 4, ExpiresAt: time.Now().Add(30 * 24 * time.Hour), Group: &service.Group{Name: "Codex Standard"}},
 		{ID: 10, UserID: 42, GroupID: 3, ExpiresAt: time.Now().Add(15 * 24 * time.Hour), Group: &service.Group{Name: "Codex Lite"}},
 	}}
-	h := NewDesktopAuthHandler(service.NewDesktopAuthService(store, issuer, reader))
+	h := NewDesktopAuthHandler(service.NewDesktopAuthService(store, issuer, reader), nil)
 	router := gin.New()
 	router.POST("/api/v1/desktop-auth/sessions", h.Start)
 	router.POST("/api/v1/desktop-auth/sessions/:sessionID/approve", func(c *gin.Context) {

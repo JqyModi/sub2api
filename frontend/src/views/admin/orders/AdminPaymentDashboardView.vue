@@ -30,6 +30,23 @@
       </div>
       <template v-else-if="stats">
         <OrderStatsCards :stats="stats" />
+        <section class="border-y border-gray-200 py-4 dark:border-dark-600">
+          <div class="mb-3 flex items-end justify-between gap-4">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('payment.admin.growthFunnel') }}</h3>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.growthFunnelHint') }}</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 sm:grid-cols-4 lg:grid-cols-7 dark:border-dark-600 dark:bg-dark-600">
+            <div v-for="(stage, index) in stats.growth_funnel || []" :key="stage.key" class="min-w-0 bg-white px-3 py-3 dark:bg-dark-800">
+              <p class="truncate text-xs text-gray-500 dark:text-gray-400" :title="t('payment.admin.funnelStages.' + stage.key)">{{ t('payment.admin.funnelStages.' + stage.key) }}</p>
+              <div class="mt-1 flex items-baseline gap-1.5">
+                <span class="text-xl font-semibold text-gray-900 dark:text-white">{{ stage.count }}</span>
+                <span v-if="stageConversion(stats.growth_funnel, index)" class="text-[11px] text-gray-400">{{ stageConversion(stats.growth_funnel, index) }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
         <DailyRevenueChart :data="stats.daily_series || []" :loading="loading" />
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div class="card p-4">
@@ -76,7 +93,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { adminPaymentAPI } from '@/api/admin/payment'
 import { extractI18nErrorMessage } from '@/utils/apiError'
-import type { CurrencyAmounts, DashboardStats, TopUserPaymentStats } from '@/types/payment'
+import type { CurrencyAmounts, DashboardStats, GrowthFunnelStage, TopUserPaymentStats } from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -122,6 +139,11 @@ function hasTopUsers(usersByCurrency: Record<string, TopUserPaymentStats[]>): bo
 
 function formatMoney(currency: string, amount: number): string {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount)
+}
+
+function stageConversion(stages: GrowthFunnelStage[], index: number): string {
+  if (index === 0 || !stages[index - 1]?.count) return ''
+  return `${Math.round((stages[index].count / stages[index - 1].count) * 100)}%`
 }
 
 async function loadDashboard() {

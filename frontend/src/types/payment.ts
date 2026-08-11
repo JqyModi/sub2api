@@ -259,4 +259,10 @@ export interface DashboardStats {
   daily_series: DailyPaymentStats[]
   payment_methods: PaymentMethodStats[]
   top_users: Record<string, TopUserPaymentStats[]>
+  growth_funnel: GrowthFunnelStage[]
+}
+
+export interface GrowthFunnelStage {
+  key: string
+  count: number
 }

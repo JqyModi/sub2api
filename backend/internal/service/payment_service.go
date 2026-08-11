@@ -155,6 +155,12 @@ type DashboardStats struct {
 	DailySeries    []DailyStats        `json:"daily_series"`
 	PaymentMethods []PaymentMethodStat `json:"payment_methods"`
 	TopUsers       TopUsersByCurrency  `json:"top_users"`
+	GrowthFunnel   []GrowthFunnelStage `json:"growth_funnel"`
+}
+
+type GrowthFunnelStage struct {
+	Key   string `json:"key"`
+	Count int    `json:"count"`
 }
 
 // CurrencyAmounts holds payment amounts keyed by their ISO 4217 currency.
