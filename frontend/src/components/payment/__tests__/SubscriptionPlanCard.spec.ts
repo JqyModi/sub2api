@@ -148,4 +148,21 @@ describe("SubscriptionPlanCard", () => {
     ]));
     expect(badge?.element.parentElement?.textContent).toContain("/ 30payment.days");
   });
+
+  it("disables purchase when a limited plan is sold out", async () => {
+    const wrapper = mountPlanCard("openai", { max_sales: 5, sold_count: 5, remaining_sales: 0 });
+    const button = wrapper.get("button");
+
+    expect(button.attributes("disabled")).toBeDefined();
+    expect(wrapper.text()).toContain("payment.planCard.soldOut");
+    await button.trigger("click");
+    expect(wrapper.emitted("select")).toBeUndefined();
+  });
+
+  it("shows remaining inventory without disabling purchase", () => {
+    const wrapper = mountPlanCard("openai", { max_sales: 5, sold_count: 3, remaining_sales: 2 });
+
+    expect(wrapper.get("button").attributes("disabled")).toBeUndefined();
+    expect(wrapper.text()).toContain("payment.planCard.remainingSales");
+  });
 });

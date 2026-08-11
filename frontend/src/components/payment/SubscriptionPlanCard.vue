@@ -92,13 +92,18 @@
 
       <div class="flex-1" />
 
+      <p v-if="plan.remaining_sales != null" :class="['mb-2 text-center text-xs font-medium', isSoldOut ? 'text-gray-500' : 'text-amber-600 dark:text-amber-400']">
+        {{ isSoldOut ? t('payment.planCard.soldOut') : t('payment.planCard.remainingSales', { count: plan.remaining_sales }) }}
+      </p>
+
       <!-- Subscribe Button -->
       <button
         type="button"
-        :class="['w-full rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-[0.98]', btnClass]"
+        :disabled="isSoldOut"
+        :class="['w-full rounded-xl py-2.5 text-sm font-semibold transition-all', isSoldOut ? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-dark-600 dark:text-dark-400' : ['active:scale-[0.98]', btnClass]]"
         @click="emit('select', plan)"
       >
-        {{ isRenewal ? t('payment.renewNow') : t('payment.subscribeNow') }}
+        {{ isSoldOut ? t('payment.planCard.soldOut') : (isRenewal ? t('payment.renewNow') : t('payment.subscribeNow')) }}
       </button>
     </div>
   </div>
@@ -132,6 +137,7 @@ const platform = computed(() => props.plan.group_platform || '')
 const isRenewal = computed(() =>
   props.activeSubscriptions?.some(s => s.group_id === props.plan.group_id && s.status === 'active') ?? false
 )
+const isSoldOut = computed(() => props.plan.remaining_sales === 0)
 
 // Derived color classes from central config
 const accentClass = computed(() => platformAccentBarClass(platform.value))

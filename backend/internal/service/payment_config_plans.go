@@ -7,6 +7,7 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
@@ -132,9 +133,19 @@ func (s *PaymentConfigService) ListPlansForSale(ctx context.Context) ([]*dbent.S
 	return s.entClient.SubscriptionPlan.Query().Where(subscriptionplan.ForSaleEQ(true)).Order(subscriptionplan.BySortOrder()).All(ctx)
 }
 
+func (s *PaymentConfigService) CountPlanSales(ctx context.Context, planID int64) (int, error) {
+	return s.entClient.PaymentOrder.Query().Where(
+		paymentorder.PlanIDEQ(planID),
+		paymentorder.StatusIn(planCapacityOrderStatuses...),
+	).Count(ctx)
+}
+
 func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanRequest) (*dbent.SubscriptionPlan, error) {
 	if err := validatePlanRequired(req.Name, req.GroupID, req.Price, req.ValidityDays, req.ValidityUnit, req.OriginalPrice); err != nil {
 		return nil, err
+	}
+	if req.MaxSales < 0 || req.PerUserLimit < 0 {
+		return nil, infraerrors.BadRequest("INVALID_PLAN_LIMIT", "plan limits must be zero or greater")
 	}
 	currency, err := normalizePlanCurrency(req.Currency)
 	if err != nil {
@@ -144,7 +155,7 @@ func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanReq
 		SetGroupID(req.GroupID).SetName(req.Name).SetDescription(req.Description).
 		SetPrice(req.Price).SetCurrency(currency).SetValidityDays(req.ValidityDays).SetValidityUnit(req.ValidityUnit).
 		SetFeatures(req.Features).SetProductName(req.ProductName).
-		SetForSale(req.ForSale).SetSortOrder(req.SortOrder)
+		SetForSale(req.ForSale).SetMaxSales(req.MaxSales).SetPerUserLimit(req.PerUserLimit).SetSortOrder(req.SortOrder)
 	if req.OriginalPrice != nil {
 		b.SetOriginalPrice(*req.OriginalPrice)
 	}
@@ -195,6 +206,18 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 	}
 	if req.ForSale != nil {
 		u.SetForSale(*req.ForSale)
+	}
+	if req.MaxSales != nil {
+		if *req.MaxSales < 0 {
+			return nil, infraerrors.BadRequest("INVALID_PLAN_LIMIT", "max_sales must be zero or greater")
+		}
+		u.SetMaxSales(*req.MaxSales)
+	}
+	if req.PerUserLimit != nil {
+		if *req.PerUserLimit < 0 {
+			return nil, infraerrors.BadRequest("INVALID_PLAN_LIMIT", "per_user_limit must be zero or greater")
+		}
+		u.SetPerUserLimit(*req.PerUserLimit)
 	}
 	if req.SortOrder != nil {
 		u.SetSortOrder(*req.SortOrder)

@@ -174,6 +174,8 @@ type CreatePlanRequest struct {
 	Features      string   `json:"features"`
 	ProductName   string   `json:"product_name"`
 	ForSale       bool     `json:"for_sale"`
+	MaxSales      int      `json:"max_sales"`
+	PerUserLimit  int      `json:"per_user_limit"`
 	SortOrder     int      `json:"sort_order"`
 }
 
@@ -189,6 +191,8 @@ type UpdatePlanRequest struct {
 	Features      *string  `json:"features"`
 	ProductName   *string  `json:"product_name"`
 	ForSale       *bool    `json:"for_sale"`
+	MaxSales      *int     `json:"max_sales"`
+	PerUserLimit  *int     `json:"per_user_limit"`
 	SortOrder     *int     `json:"sort_order"`
 }
 

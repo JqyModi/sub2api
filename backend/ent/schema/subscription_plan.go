@@ -59,6 +59,14 @@ func (SubscriptionPlan) Fields() []ent.Field {
 			Default(""),
 		field.Bool("for_sale").
 			Default(true),
+		field.Int("max_sales").
+			Default(0).
+			Min(0).
+			Comment("Maximum number of capacity-reserving orders; 0 means unlimited"),
+		field.Int("per_user_limit").
+			Default(0).
+			Min(0).
+			Comment("Maximum purchases per user; 0 means unlimited"),
 		field.Int("sort_order").
 			Default(0),
 		field.Time("created_at").

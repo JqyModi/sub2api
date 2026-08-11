@@ -109,6 +109,16 @@ func ForSale(v bool) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldEQ(FieldForSale, v))
 }
 
+// MaxSales applies equality check predicate on the "max_sales" field. It's identical to MaxSalesEQ.
+func MaxSales(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldMaxSales, v))
+}
+
+// PerUserLimit applies equality check predicate on the "per_user_limit" field. It's identical to PerUserLimitEQ.
+func PerUserLimit(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldPerUserLimit, v))
+}
+
 // SortOrder applies equality check predicate on the "sort_order" field. It's identical to SortOrderEQ.
 func SortOrder(v int) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldEQ(FieldSortOrder, v))
@@ -692,6 +702,86 @@ func ForSaleEQ(v bool) predicate.SubscriptionPlan {
 // ForSaleNEQ applies the NEQ predicate on the "for_sale" field.
 func ForSaleNEQ(v bool) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldNEQ(FieldForSale, v))
+}
+
+// MaxSalesEQ applies the EQ predicate on the "max_sales" field.
+func MaxSalesEQ(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldMaxSales, v))
+}
+
+// MaxSalesNEQ applies the NEQ predicate on the "max_sales" field.
+func MaxSalesNEQ(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNEQ(FieldMaxSales, v))
+}
+
+// MaxSalesIn applies the In predicate on the "max_sales" field.
+func MaxSalesIn(vs ...int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldIn(FieldMaxSales, vs...))
+}
+
+// MaxSalesNotIn applies the NotIn predicate on the "max_sales" field.
+func MaxSalesNotIn(vs ...int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNotIn(FieldMaxSales, vs...))
+}
+
+// MaxSalesGT applies the GT predicate on the "max_sales" field.
+func MaxSalesGT(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGT(FieldMaxSales, v))
+}
+
+// MaxSalesGTE applies the GTE predicate on the "max_sales" field.
+func MaxSalesGTE(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGTE(FieldMaxSales, v))
+}
+
+// MaxSalesLT applies the LT predicate on the "max_sales" field.
+func MaxSalesLT(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLT(FieldMaxSales, v))
+}
+
+// MaxSalesLTE applies the LTE predicate on the "max_sales" field.
+func MaxSalesLTE(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLTE(FieldMaxSales, v))
+}
+
+// PerUserLimitEQ applies the EQ predicate on the "per_user_limit" field.
+func PerUserLimitEQ(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldPerUserLimit, v))
+}
+
+// PerUserLimitNEQ applies the NEQ predicate on the "per_user_limit" field.
+func PerUserLimitNEQ(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNEQ(FieldPerUserLimit, v))
+}
+
+// PerUserLimitIn applies the In predicate on the "per_user_limit" field.
+func PerUserLimitIn(vs ...int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldIn(FieldPerUserLimit, vs...))
+}
+
+// PerUserLimitNotIn applies the NotIn predicate on the "per_user_limit" field.
+func PerUserLimitNotIn(vs ...int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNotIn(FieldPerUserLimit, vs...))
+}
+
+// PerUserLimitGT applies the GT predicate on the "per_user_limit" field.
+func PerUserLimitGT(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGT(FieldPerUserLimit, v))
+}
+
+// PerUserLimitGTE applies the GTE predicate on the "per_user_limit" field.
+func PerUserLimitGTE(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGTE(FieldPerUserLimit, v))
+}
+
+// PerUserLimitLT applies the LT predicate on the "per_user_limit" field.
+func PerUserLimitLT(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLT(FieldPerUserLimit, v))
+}
+
+// PerUserLimitLTE applies the LTE predicate on the "per_user_limit" field.
+func PerUserLimitLTE(v int) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLTE(FieldPerUserLimit, v))
 }
 
 // SortOrderEQ applies the EQ predicate on the "sort_order" field.

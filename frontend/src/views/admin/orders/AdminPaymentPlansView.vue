@@ -37,6 +37,15 @@
         <template #cell-validity_days="{ value, row }">
           <span class="text-sm">{{ value }} {{ t('payment.admin.' + (row.validity_unit || 'days')) }}</span>
         </template>
+        <template #cell-max_sales="{ row }">
+          <div class="text-sm text-gray-700 dark:text-gray-300">
+            <span v-if="row.max_sales > 0" class="font-medium">{{ row.sold_count || 0 }} / {{ row.max_sales }}</span>
+            <span v-else>{{ t('payment.admin.unlimited') }}</span>
+            <div v-if="row.per_user_limit > 0" class="mt-0.5 text-xs text-gray-400">
+              {{ t('payment.admin.perUserLimitValue', { count: row.per_user_limit }) }}
+            </div>
+          </div>
+        </template>
         <template #cell-for_sale="{ value, row }">
           <button
             type="button"
@@ -148,6 +157,7 @@ const planColumns = computed((): Column[] => [
   { key: 'group_id', label: t('payment.admin.group') },
   { key: 'price', label: t('payment.admin.price') },
   { key: 'validity_days', label: t('payment.admin.validity') },
+  { key: 'max_sales', label: t('payment.admin.salesLimit') },
   { key: 'for_sale', label: t('payment.admin.forSale') },
   { key: 'sort_order', label: t('payment.admin.sortOrder') },
   { key: 'actions', label: t('common.actions') },

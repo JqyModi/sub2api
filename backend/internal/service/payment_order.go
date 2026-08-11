@@ -13,6 +13,7 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
+	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/Wei-Shaw/sub2api/internal/payment/provider"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
@@ -149,6 +150,18 @@ func (s *PaymentService) validateSubOrder(ctx context.Context, req CreateOrderRe
 	return plan, nil
 }
 
+var planCapacityOrderStatuses = []string{
+	OrderStatusPending,
+	OrderStatusPaid,
+	OrderStatusRecharging,
+	OrderStatusCompleted,
+	OrderStatusRefundRequested,
+	OrderStatusRefunding,
+	OrderStatusRefundPending,
+	OrderStatusPartiallyRefunded,
+	OrderStatusRefundFailed,
+}
+
 func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderRequest, user *User, plan *dbent.SubscriptionPlan, cfg *PaymentConfig, orderAmount, limitAmount, feeRate, payAmount float64, sel *payment.InstanceSelection) (*dbent.PaymentOrder, error) {
 	tx, err := s.entClient.Tx(ctx)
 	if err != nil {
@@ -157,6 +170,15 @@ func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderReq
 	defer func() { _ = tx.Rollback() }()
 	if err := s.checkPendingLimit(ctx, tx, req.UserID, cfg.MaxPendingOrders); err != nil {
 		return nil, err
+	}
+	if plan != nil {
+		lockedPlan, err := tx.SubscriptionPlan.Query().Where(subscriptionplan.IDEQ(plan.ID)).ForUpdate().Only(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("lock subscription plan: %w", err)
+		}
+		if err := s.checkPlanCapacity(ctx, tx, lockedPlan, req.UserID); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.checkDailyLimit(ctx, tx, req.UserID, limitAmount, cfg.DailyLimit); err != nil {
 		return nil, err
@@ -222,6 +244,35 @@ func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderReq
 		return nil, fmt.Errorf("commit order transaction: %w", err)
 	}
 	return order, nil
+}
+
+func (s *PaymentService) checkPlanCapacity(ctx context.Context, tx *dbent.Tx, plan *dbent.SubscriptionPlan, userID int64) error {
+	if plan.MaxSales > 0 {
+		used, err := tx.PaymentOrder.Query().Where(
+			paymentorder.PlanIDEQ(plan.ID),
+			paymentorder.StatusIn(planCapacityOrderStatuses...),
+		).Count(ctx)
+		if err != nil {
+			return fmt.Errorf("count plan sales: %w", err)
+		}
+		if used >= plan.MaxSales {
+			return infraerrors.Conflict("PLAN_SOLD_OUT", "subscription plan is sold out")
+		}
+	}
+	if plan.PerUserLimit > 0 {
+		used, err := tx.PaymentOrder.Query().Where(
+			paymentorder.PlanIDEQ(plan.ID),
+			paymentorder.UserIDEQ(userID),
+			paymentorder.StatusIn(planCapacityOrderStatuses...),
+		).Count(ctx)
+		if err != nil {
+			return fmt.Errorf("count user plan purchases: %w", err)
+		}
+		if used >= plan.PerUserLimit {
+			return infraerrors.Conflict("PLAN_PURCHASE_LIMIT_REACHED", "purchase limit reached for this user")
+		}
+	}
+	return nil
 }
 
 func (s *PaymentService) allocateOutTradeNo(ctx context.Context, tx *dbent.Tx) (string, error) {

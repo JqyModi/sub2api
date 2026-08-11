@@ -284,7 +284,16 @@ func (h *PaymentHandler) ListPlans(c *gin.Context) {
 		return
 	}
 	groupInfo := h.configService.GetGroupInfoMap(c.Request.Context(), plans)
-	response.Success(c, adminSubscriptionPlansForResponse(plans, groupInfo))
+	sales := make(map[int64]int, len(plans))
+	for _, plan := range plans {
+		count, countErr := h.configService.CountPlanSales(c.Request.Context(), int64(plan.ID))
+		if countErr != nil {
+			response.ErrorFrom(c, countErr)
+			return
+		}
+		sales[int64(plan.ID)] = count
+	}
+	response.Success(c, adminSubscriptionPlansForResponse(plans, groupInfo, sales))
 }
 
 type AdminSubscriptionPlanResult struct {
@@ -307,18 +316,28 @@ type AdminSubscriptionPlanResult struct {
 	Features        string    `json:"features"`
 	ProductName     string    `json:"product_name"`
 	ForSale         bool      `json:"for_sale"`
+	MaxSales        int       `json:"max_sales"`
+	PerUserLimit    int       `json:"per_user_limit"`
+	SoldCount       int       `json:"sold_count"`
+	RemainingSales  *int      `json:"remaining_sales"`
 	SortOrder       int       `json:"sort_order"`
 	CreatedAt       time.Time `json:"created_at,omitempty"`
 	UpdatedAt       time.Time `json:"updated_at,omitempty"`
 }
 
-func adminSubscriptionPlansForResponse(plans []*dbent.SubscriptionPlan, groupInfo map[int64]service.PlanGroupInfo) []AdminSubscriptionPlanResult {
+func adminSubscriptionPlansForResponse(plans []*dbent.SubscriptionPlan, groupInfo map[int64]service.PlanGroupInfo, sales map[int64]int) []AdminSubscriptionPlanResult {
 	result := make([]AdminSubscriptionPlanResult, 0, len(plans))
 	for _, p := range plans {
 		if p == nil {
 			continue
 		}
 		gi := groupInfo[p.GroupID]
+		soldCount := sales[int64(p.ID)]
+		var remainingSales *int
+		if p.MaxSales > 0 {
+			remaining := max(p.MaxSales-soldCount, 0)
+			remainingSales = &remaining
+		}
 		result = append(result, AdminSubscriptionPlanResult{
 			ID:              int64(p.ID),
 			GroupID:         p.GroupID,
@@ -339,6 +358,10 @@ func adminSubscriptionPlansForResponse(plans []*dbent.SubscriptionPlan, groupInf
 			Features:        p.Features,
 			ProductName:     p.ProductName,
 			ForSale:         p.ForSale,
+			MaxSales:        p.MaxSales,
+			PerUserLimit:    p.PerUserLimit,
+			SoldCount:       soldCount,
+			RemainingSales:  remainingSales,
 			SortOrder:       p.SortOrder,
 			CreatedAt:       p.CreatedAt,
 			UpdatedAt:       p.UpdatedAt,

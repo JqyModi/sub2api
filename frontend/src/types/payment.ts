@@ -133,6 +133,13 @@ export interface SubscriptionPlan {
   /** Stored as JSON string in backend; API layer should parse before use */
   features: string[]
   for_sale: boolean
+  /** 0 means unlimited. */
+  max_sales: number
+  /** 0 means unlimited. */
+  per_user_limit: number
+  sold_count?: number
+  /** null means unlimited. */
+  remaining_sales?: number | null
   sort_order: number
 }
 

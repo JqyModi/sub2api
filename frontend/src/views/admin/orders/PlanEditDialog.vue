@@ -59,6 +59,18 @@
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.currencyHint') }}</p>
         </div>
       </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="input-label">{{ t('payment.admin.maxSales') }}</label>
+          <input v-model.number="planForm.max_sales" type="number" min="0" class="input" />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.zeroMeansUnlimited') }}</p>
+        </div>
+        <div>
+          <label class="input-label">{{ t('payment.admin.perUserLimit') }}</label>
+          <input v-model.number="planForm.per_user_limit" type="number" min="0" class="input" />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.zeroMeansUnlimited') }}</p>
+        </div>
+      </div>
       <div>
         <label class="input-label">{{ t('payment.admin.features') }}</label>
         <textarea v-model="planFeaturesText" rows="3" class="input" :placeholder="t('payment.admin.featuresPlaceholder')"></textarea>
@@ -122,7 +134,7 @@ const { t } = useI18n()
 const appStore = useAppStore()
 
 const saving = ref(false)
-const planForm = reactive({ name: '', group_id: null as number | null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true })
+const planForm = reactive({ name: '', group_id: null as number | null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true, max_sales: 0, per_user_limit: 0 })
 const planFeaturesText = ref('')
 
 const validityUnitOptions = computed(() => [
@@ -175,10 +187,10 @@ const subscriptionCnyPreview = computed(() => {
 watch(() => props.show, (visible) => {
   if (!visible) return
   if (props.plan) {
-    Object.assign(planForm, { name: props.plan.name, group_id: props.plan.group_id, description: props.plan.description, price: props.plan.price, original_price: props.plan.original_price || 0, currency: props.plan.currency || '', validity_days: props.plan.validity_days, validity_unit: props.plan.validity_unit || 'days', sort_order: props.plan.sort_order || 0, for_sale: props.plan.for_sale })
+    Object.assign(planForm, { name: props.plan.name, group_id: props.plan.group_id, description: props.plan.description, price: props.plan.price, original_price: props.plan.original_price || 0, currency: props.plan.currency || '', validity_days: props.plan.validity_days, validity_unit: props.plan.validity_unit || 'days', sort_order: props.plan.sort_order || 0, for_sale: props.plan.for_sale, max_sales: props.plan.max_sales || 0, per_user_limit: props.plan.per_user_limit || 0 })
     planFeaturesText.value = (props.plan.features || []).join('\n')
   } else {
-    Object.assign(planForm, { name: '', group_id: null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true })
+    Object.assign(planForm, { name: '', group_id: null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true, max_sales: 0, per_user_limit: 0 })
     planFeaturesText.value = ''
   }
 })
@@ -197,6 +209,8 @@ function buildPlanPayload() {
     validity_unit: planForm.validity_unit,
     sort_order: planForm.sort_order,
     for_sale: planForm.for_sale,
+    max_sales: planForm.max_sales || 0,
+    per_user_limit: planForm.per_user_limit || 0,
     features,
   }
 }

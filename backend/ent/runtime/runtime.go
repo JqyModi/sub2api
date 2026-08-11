@@ -1836,16 +1836,28 @@ func init() {
 	subscriptionplanDescForSale := subscriptionplanFields[10].Descriptor()
 	// subscriptionplan.DefaultForSale holds the default value on creation for the for_sale field.
 	subscriptionplan.DefaultForSale = subscriptionplanDescForSale.Default.(bool)
+	// subscriptionplanDescMaxSales is the schema descriptor for max_sales field.
+	subscriptionplanDescMaxSales := subscriptionplanFields[11].Descriptor()
+	// subscriptionplan.DefaultMaxSales holds the default value on creation for the max_sales field.
+	subscriptionplan.DefaultMaxSales = subscriptionplanDescMaxSales.Default.(int)
+	// subscriptionplan.MaxSalesValidator is a validator for the "max_sales" field. It is called by the builders before save.
+	subscriptionplan.MaxSalesValidator = subscriptionplanDescMaxSales.Validators[0].(func(int) error)
+	// subscriptionplanDescPerUserLimit is the schema descriptor for per_user_limit field.
+	subscriptionplanDescPerUserLimit := subscriptionplanFields[12].Descriptor()
+	// subscriptionplan.DefaultPerUserLimit holds the default value on creation for the per_user_limit field.
+	subscriptionplan.DefaultPerUserLimit = subscriptionplanDescPerUserLimit.Default.(int)
+	// subscriptionplan.PerUserLimitValidator is a validator for the "per_user_limit" field. It is called by the builders before save.
+	subscriptionplan.PerUserLimitValidator = subscriptionplanDescPerUserLimit.Validators[0].(func(int) error)
 	// subscriptionplanDescSortOrder is the schema descriptor for sort_order field.
-	subscriptionplanDescSortOrder := subscriptionplanFields[11].Descriptor()
+	subscriptionplanDescSortOrder := subscriptionplanFields[13].Descriptor()
 	// subscriptionplan.DefaultSortOrder holds the default value on creation for the sort_order field.
 	subscriptionplan.DefaultSortOrder = subscriptionplanDescSortOrder.Default.(int)
 	// subscriptionplanDescCreatedAt is the schema descriptor for created_at field.
-	subscriptionplanDescCreatedAt := subscriptionplanFields[12].Descriptor()
+	subscriptionplanDescCreatedAt := subscriptionplanFields[14].Descriptor()
 	// subscriptionplan.DefaultCreatedAt holds the default value on creation for the created_at field.
 	subscriptionplan.DefaultCreatedAt = subscriptionplanDescCreatedAt.Default.(func() time.Time)
 	// subscriptionplanDescUpdatedAt is the schema descriptor for updated_at field.
-	subscriptionplanDescUpdatedAt := subscriptionplanFields[13].Descriptor()
+	subscriptionplanDescUpdatedAt := subscriptionplanFields[15].Descriptor()
 	// subscriptionplan.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	subscriptionplan.DefaultUpdatedAt = subscriptionplanDescUpdatedAt.Default.(func() time.Time)
 	// subscriptionplan.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

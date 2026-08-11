@@ -39463,6 +39463,10 @@ type SubscriptionPlanMutation struct {
 	features          *string
 	product_name      *string
 	for_sale          *bool
+	max_sales         *int
+	addmax_sales      *int
+	per_user_limit    *int
+	addper_user_limit *int
 	sort_order        *int
 	addsort_order     *int
 	created_at        *time.Time
@@ -40061,6 +40065,118 @@ func (m *SubscriptionPlanMutation) ResetForSale() {
 	m.for_sale = nil
 }
 
+// SetMaxSales sets the "max_sales" field.
+func (m *SubscriptionPlanMutation) SetMaxSales(i int) {
+	m.max_sales = &i
+	m.addmax_sales = nil
+}
+
+// MaxSales returns the value of the "max_sales" field in the mutation.
+func (m *SubscriptionPlanMutation) MaxSales() (r int, exists bool) {
+	v := m.max_sales
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxSales returns the old "max_sales" field's value of the SubscriptionPlan entity.
+// If the SubscriptionPlan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionPlanMutation) OldMaxSales(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxSales is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxSales requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxSales: %w", err)
+	}
+	return oldValue.MaxSales, nil
+}
+
+// AddMaxSales adds i to the "max_sales" field.
+func (m *SubscriptionPlanMutation) AddMaxSales(i int) {
+	if m.addmax_sales != nil {
+		*m.addmax_sales += i
+	} else {
+		m.addmax_sales = &i
+	}
+}
+
+// AddedMaxSales returns the value that was added to the "max_sales" field in this mutation.
+func (m *SubscriptionPlanMutation) AddedMaxSales() (r int, exists bool) {
+	v := m.addmax_sales
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMaxSales resets all changes to the "max_sales" field.
+func (m *SubscriptionPlanMutation) ResetMaxSales() {
+	m.max_sales = nil
+	m.addmax_sales = nil
+}
+
+// SetPerUserLimit sets the "per_user_limit" field.
+func (m *SubscriptionPlanMutation) SetPerUserLimit(i int) {
+	m.per_user_limit = &i
+	m.addper_user_limit = nil
+}
+
+// PerUserLimit returns the value of the "per_user_limit" field in the mutation.
+func (m *SubscriptionPlanMutation) PerUserLimit() (r int, exists bool) {
+	v := m.per_user_limit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPerUserLimit returns the old "per_user_limit" field's value of the SubscriptionPlan entity.
+// If the SubscriptionPlan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionPlanMutation) OldPerUserLimit(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPerUserLimit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPerUserLimit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPerUserLimit: %w", err)
+	}
+	return oldValue.PerUserLimit, nil
+}
+
+// AddPerUserLimit adds i to the "per_user_limit" field.
+func (m *SubscriptionPlanMutation) AddPerUserLimit(i int) {
+	if m.addper_user_limit != nil {
+		*m.addper_user_limit += i
+	} else {
+		m.addper_user_limit = &i
+	}
+}
+
+// AddedPerUserLimit returns the value that was added to the "per_user_limit" field in this mutation.
+func (m *SubscriptionPlanMutation) AddedPerUserLimit() (r int, exists bool) {
+	v := m.addper_user_limit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPerUserLimit resets all changes to the "per_user_limit" field.
+func (m *SubscriptionPlanMutation) ResetPerUserLimit() {
+	m.per_user_limit = nil
+	m.addper_user_limit = nil
+}
+
 // SetSortOrder sets the "sort_order" field.
 func (m *SubscriptionPlanMutation) SetSortOrder(i int) {
 	m.sort_order = &i
@@ -40223,7 +40339,7 @@ func (m *SubscriptionPlanMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SubscriptionPlanMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 16)
 	if m.group_id != nil {
 		fields = append(fields, subscriptionplan.FieldGroupID)
 	}
@@ -40256,6 +40372,12 @@ func (m *SubscriptionPlanMutation) Fields() []string {
 	}
 	if m.for_sale != nil {
 		fields = append(fields, subscriptionplan.FieldForSale)
+	}
+	if m.max_sales != nil {
+		fields = append(fields, subscriptionplan.FieldMaxSales)
+	}
+	if m.per_user_limit != nil {
+		fields = append(fields, subscriptionplan.FieldPerUserLimit)
 	}
 	if m.sort_order != nil {
 		fields = append(fields, subscriptionplan.FieldSortOrder)
@@ -40296,6 +40418,10 @@ func (m *SubscriptionPlanMutation) Field(name string) (ent.Value, bool) {
 		return m.ProductName()
 	case subscriptionplan.FieldForSale:
 		return m.ForSale()
+	case subscriptionplan.FieldMaxSales:
+		return m.MaxSales()
+	case subscriptionplan.FieldPerUserLimit:
+		return m.PerUserLimit()
 	case subscriptionplan.FieldSortOrder:
 		return m.SortOrder()
 	case subscriptionplan.FieldCreatedAt:
@@ -40333,6 +40459,10 @@ func (m *SubscriptionPlanMutation) OldField(ctx context.Context, name string) (e
 		return m.OldProductName(ctx)
 	case subscriptionplan.FieldForSale:
 		return m.OldForSale(ctx)
+	case subscriptionplan.FieldMaxSales:
+		return m.OldMaxSales(ctx)
+	case subscriptionplan.FieldPerUserLimit:
+		return m.OldPerUserLimit(ctx)
 	case subscriptionplan.FieldSortOrder:
 		return m.OldSortOrder(ctx)
 	case subscriptionplan.FieldCreatedAt:
@@ -40425,6 +40555,20 @@ func (m *SubscriptionPlanMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetForSale(v)
 		return nil
+	case subscriptionplan.FieldMaxSales:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxSales(v)
+		return nil
+	case subscriptionplan.FieldPerUserLimit:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPerUserLimit(v)
+		return nil
 	case subscriptionplan.FieldSortOrder:
 		v, ok := value.(int)
 		if !ok {
@@ -40466,6 +40610,12 @@ func (m *SubscriptionPlanMutation) AddedFields() []string {
 	if m.addvalidity_days != nil {
 		fields = append(fields, subscriptionplan.FieldValidityDays)
 	}
+	if m.addmax_sales != nil {
+		fields = append(fields, subscriptionplan.FieldMaxSales)
+	}
+	if m.addper_user_limit != nil {
+		fields = append(fields, subscriptionplan.FieldPerUserLimit)
+	}
 	if m.addsort_order != nil {
 		fields = append(fields, subscriptionplan.FieldSortOrder)
 	}
@@ -40485,6 +40635,10 @@ func (m *SubscriptionPlanMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedOriginalPrice()
 	case subscriptionplan.FieldValidityDays:
 		return m.AddedValidityDays()
+	case subscriptionplan.FieldMaxSales:
+		return m.AddedMaxSales()
+	case subscriptionplan.FieldPerUserLimit:
+		return m.AddedPerUserLimit()
 	case subscriptionplan.FieldSortOrder:
 		return m.AddedSortOrder()
 	}
@@ -40523,6 +40677,20 @@ func (m *SubscriptionPlanMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddValidityDays(v)
+		return nil
+	case subscriptionplan.FieldMaxSales:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMaxSales(v)
+		return nil
+	case subscriptionplan.FieldPerUserLimit:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPerUserLimit(v)
 		return nil
 	case subscriptionplan.FieldSortOrder:
 		v, ok := value.(int)
@@ -40599,6 +40767,12 @@ func (m *SubscriptionPlanMutation) ResetField(name string) error {
 		return nil
 	case subscriptionplan.FieldForSale:
 		m.ResetForSale()
+		return nil
+	case subscriptionplan.FieldMaxSales:
+		m.ResetMaxSales()
+		return nil
+	case subscriptionplan.FieldPerUserLimit:
+		m.ResetPerUserLimit()
 		return nil
 	case subscriptionplan.FieldSortOrder:
 		m.ResetSortOrder()

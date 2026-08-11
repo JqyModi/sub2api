@@ -39,6 +39,10 @@ type SubscriptionPlan struct {
 	ProductName string `json:"product_name,omitempty"`
 	// ForSale holds the value of the "for_sale" field.
 	ForSale bool `json:"for_sale,omitempty"`
+	// Maximum number of capacity-reserving orders; 0 means unlimited
+	MaxSales int `json:"max_sales,omitempty"`
+	// Maximum purchases per user; 0 means unlimited
+	PerUserLimit int `json:"per_user_limit,omitempty"`
 	// SortOrder holds the value of the "sort_order" field.
 	SortOrder int `json:"sort_order,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -57,7 +61,7 @@ func (*SubscriptionPlan) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case subscriptionplan.FieldPrice, subscriptionplan.FieldOriginalPrice:
 			values[i] = new(sql.NullFloat64)
-		case subscriptionplan.FieldID, subscriptionplan.FieldGroupID, subscriptionplan.FieldValidityDays, subscriptionplan.FieldSortOrder:
+		case subscriptionplan.FieldID, subscriptionplan.FieldGroupID, subscriptionplan.FieldValidityDays, subscriptionplan.FieldMaxSales, subscriptionplan.FieldPerUserLimit, subscriptionplan.FieldSortOrder:
 			values[i] = new(sql.NullInt64)
 		case subscriptionplan.FieldName, subscriptionplan.FieldDescription, subscriptionplan.FieldCurrency, subscriptionplan.FieldValidityUnit, subscriptionplan.FieldFeatures, subscriptionplan.FieldProductName:
 			values[i] = new(sql.NullString)
@@ -151,6 +155,18 @@ func (_m *SubscriptionPlan) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ForSale = value.Bool
 			}
+		case subscriptionplan.FieldMaxSales:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field max_sales", values[i])
+			} else if value.Valid {
+				_m.MaxSales = int(value.Int64)
+			}
+		case subscriptionplan.FieldPerUserLimit:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field per_user_limit", values[i])
+			} else if value.Valid {
+				_m.PerUserLimit = int(value.Int64)
+			}
 		case subscriptionplan.FieldSortOrder:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field sort_order", values[i])
@@ -239,6 +255,12 @@ func (_m *SubscriptionPlan) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("for_sale=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ForSale))
+	builder.WriteString(", ")
+	builder.WriteString("max_sales=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MaxSales))
+	builder.WriteString(", ")
+	builder.WriteString("per_user_limit=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PerUserLimit))
 	builder.WriteString(", ")
 	builder.WriteString("sort_order=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SortOrder))

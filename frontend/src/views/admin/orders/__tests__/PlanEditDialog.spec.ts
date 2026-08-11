@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 
 import PlanEditDialog from '../PlanEditDialog.vue'
 import type { AdminGroup } from '@/types'
+import { adminPaymentAPI } from '@/api/admin/payment'
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -192,5 +193,24 @@ describe('PlanEditDialog', () => {
 
     expect(options).toContain('OpenAI + Claude + Gemini + Grok — composite (1.2x)')
     expect(options).not.toContain('Standard OpenAI — openai (1x)')
+  })
+
+  it('saves total and per-user sales limits', async () => {
+    const wrapper = mountDialog({ groups: [groupFixture({ id: 10 })] })
+    const inputs = wrapper.findAll('input[type="number"]')
+
+    await wrapper.find('input[type="text"]').setValue('Starter')
+    await wrapper.find('select').setValue('10')
+    await wrapper.find('textarea').setValue('Starter plan')
+    await inputs[0].setValue('7.99')
+    await inputs[2].setValue('30')
+    await inputs[4].setValue('5')
+    await inputs[5].setValue('1')
+    await wrapper.get('form').trigger('submit')
+
+    expect(adminPaymentAPI.createPlan).toHaveBeenCalledWith(expect.objectContaining({
+      max_sales: 5,
+      per_user_limit: 1,
+    }))
   })
 })

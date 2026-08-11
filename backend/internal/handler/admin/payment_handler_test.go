@@ -64,6 +64,8 @@ func TestAdminSubscriptionPlansForResponseIncludesCompositeGroupInfo(t *testing.
 			Features:     "OpenAI\nClaude\nGemini\nGrok",
 			ProductName:  "Sub2API",
 			ForSale:      true,
+			MaxSales:    5,
+			PerUserLimit: 1,
 			SortOrder:    1,
 			CreatedAt:    now,
 			UpdatedAt:    now,
@@ -79,7 +81,7 @@ func TestAdminSubscriptionPlansForResponseIncludesCompositeGroupInfo(t *testing.
 		},
 	}
 
-	got := adminSubscriptionPlansForResponse(plans, groupInfo)
+	got := adminSubscriptionPlansForResponse(plans, groupInfo, map[int64]int{11: 3})
 
 	if len(got) != 1 {
 		t.Fatalf("expected one plan, got %d", len(got))
@@ -100,6 +102,12 @@ func TestAdminSubscriptionPlansForResponseIncludesCompositeGroupInfo(t *testing.
 	// 静默清空套餐货币（PlanEditDialog 回传空串 → SetCurrency("")）。
 	if got[0].Currency != "CNY" {
 		t.Fatalf("expected currency to be preserved, got %q", got[0].Currency)
+	}
+	if got[0].SoldCount != 3 || got[0].RemainingSales == nil || *got[0].RemainingSales != 2 {
+		t.Fatalf("expected sales capacity to be preserved, got sold=%d remaining=%v", got[0].SoldCount, got[0].RemainingSales)
+	}
+	if got[0].PerUserLimit != 1 {
+		t.Fatalf("expected per-user limit to be preserved, got %d", got[0].PerUserLimit)
 	}
 	if !got[0].CreatedAt.Equal(now) || !got[0].UpdatedAt.Equal(now) {
 		t.Fatalf("expected created_at/updated_at to be preserved, got %v / %v", got[0].CreatedAt, got[0].UpdatedAt)

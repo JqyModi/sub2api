@@ -70,12 +70,26 @@ func (h *PaymentHandler) GetPlans(c *gin.Context) {
 		Features           string   `json:"features"`
 		ProductName        string   `json:"product_name"`
 		ForSale            bool     `json:"for_sale"`
+		MaxSales           int      `json:"max_sales"`
+		PerUserLimit       int      `json:"per_user_limit"`
+		SoldCount          int      `json:"sold_count"`
+		RemainingSales     *int     `json:"remaining_sales"`
 		SortOrder          int      `json:"sort_order"`
 	}
 	groupInfo := h.configService.GetGroupInfoMap(c.Request.Context(), plans)
 	result := make([]planWithPlatform, 0, len(plans))
 	for _, p := range plans {
 		gi := groupInfo[p.GroupID]
+		soldCount, countErr := h.configService.CountPlanSales(c.Request.Context(), int64(p.ID))
+		if countErr != nil {
+			response.ErrorFrom(c, countErr)
+			return
+		}
+		var remainingSales *int
+		if p.MaxSales > 0 {
+			remaining := max(p.MaxSales-soldCount, 0)
+			remainingSales = &remaining
+		}
 		result = append(result, planWithPlatform{
 			ID: int64(p.ID), GroupID: p.GroupID,
 			GroupPlatform: gi.Platform, GroupName: gi.Name,
@@ -85,6 +99,8 @@ func (h *PaymentHandler) GetPlans(c *gin.Context) {
 			Currency:     p.Currency,
 			ValidityDays: p.ValidityDays, ValidityUnit: p.ValidityUnit, Features: p.Features,
 			ProductName: p.ProductName, ForSale: p.ForSale, SortOrder: p.SortOrder,
+			MaxSales: p.MaxSales, PerUserLimit: p.PerUserLimit,
+			SoldCount: soldCount, RemainingSales: remainingSales,
 		})
 	}
 	response.Success(c, result)
@@ -124,6 +140,16 @@ func (h *PaymentHandler) GetCheckoutInfo(c *gin.Context) {
 	planList := make([]checkoutPlan, 0, len(plans))
 	for _, p := range plans {
 		gi := groupInfo[p.GroupID]
+		soldCount, countErr := h.configService.CountPlanSales(ctx, int64(p.ID))
+		if countErr != nil {
+			response.ErrorFrom(c, countErr)
+			return
+		}
+		var remainingSales *int
+		if p.MaxSales > 0 {
+			remaining := max(p.MaxSales-soldCount, 0)
+			remainingSales = &remaining
+		}
 		planList = append(planList, checkoutPlan{
 			ID: int64(p.ID), GroupID: p.GroupID,
 			GroupPlatform: gi.Platform, GroupName: gi.Name,
@@ -137,6 +163,8 @@ func (h *PaymentHandler) GetCheckoutInfo(c *gin.Context) {
 			Currency:     p.Currency,
 			ValidityDays: p.ValidityDays, ValidityUnit: p.ValidityUnit, Features: parseFeatures(p.Features),
 			ProductName: p.ProductName,
+			MaxSales:    p.MaxSales, PerUserLimit: p.PerUserLimit,
+			SoldCount: soldCount, RemainingSales: remainingSales,
 		})
 	}
 
@@ -196,6 +224,10 @@ type checkoutPlan struct {
 	ValidityUnit       string   `json:"validity_unit"`
 	Features           []string `json:"features"`
 	ProductName        string   `json:"product_name"`
+	MaxSales           int      `json:"max_sales"`
+	PerUserLimit       int      `json:"per_user_limit"`
+	SoldCount          int      `json:"sold_count"`
+	RemainingSales     *int     `json:"remaining_sales"`
 }
 
 // parseFeatures splits a newline-separated features string into a string slice.
