@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, shallowMount } from '@vue/test-utils'
-import { ref } from 'vue'
 
 const approveSession = vi.hoisted(() => vi.fn())
+const getPlanCatalog = vi.hoisted(() => vi.fn())
 const routerReplace = vi.hoisted(() => vi.fn())
+const localeState = vi.hoisted(() => ({ value: 'zh-CN' }))
 const routeState = vi.hoisted(() => ({
   query: { session: 'dsa_component_test' } as Record<string, unknown>,
   fullPath: '/desktop/authorize?session=dsa_component_test',
@@ -13,6 +14,10 @@ vi.mock('@/api', () => ({
   apiClient: {
     post: approveSession,
   },
+}))
+
+vi.mock('@/api/payment', () => ({
+  paymentAPI: { getPlanCatalog },
 }))
 
 vi.mock('vue-router', async () => {
@@ -28,7 +33,7 @@ vi.mock('vue-i18n', async () => {
   const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
   return {
     ...actual,
-    useI18n: () => ({ locale: ref('zh-CN') }),
+    useI18n: () => ({ locale: localeState }),
   }
 })
 
@@ -37,7 +42,20 @@ import DesktopAuthorizationView from '../DesktopAuthorizationView.vue'
 describe('DesktopAuthorizationView', () => {
   beforeEach(() => {
     approveSession.mockReset()
+    getPlanCatalog.mockReset().mockResolvedValue({ data: [
+      {
+        id: 3, group_id: 4, name: 'Codex 标准版', name_en: 'Codex Standard',
+        description: '适合持续开发', description_en: 'For continuous development',
+        features: [], features_en: [],
+      },
+      {
+        id: 2, group_id: 3, name: 'Codex 轻量版', name_en: 'Codex Starter',
+        description: '适合轻度使用', description_en: 'For light usage',
+        features: [], features_en: [],
+      },
+    ] })
     routerReplace.mockReset().mockResolvedValue(undefined)
+    localeState.value = 'zh-CN'
   })
 
   it('checks authorization automatically and sends unsubscribed users straight to subscription plans', async () => {
@@ -61,8 +79,8 @@ describe('DesktopAuthorizationView', () => {
   it('asks the user to choose when multiple active subscriptions exist', async () => {
     approveSession
       .mockResolvedValueOnce({ data: { state: 'selection_required', subscriptions: [
-        { id: 20, group_id: 4, group_name: 'Codex 标准版', expires_at: '2026-09-10T00:00:00Z' },
-        { id: 10, group_id: 3, group_name: 'Codex 轻量版', expires_at: '2026-09-01T00:00:00Z' },
+        { id: 20, group_id: 4, group_name: 'codex-standard', expires_at: '2026-09-10T00:00:00Z' },
+        { id: 10, group_id: 3, group_name: 'codex-lite', expires_at: '2026-09-01T00:00:00Z' },
       ] } })
       .mockResolvedValueOnce({ data: { state: 'authorized' } })
 
@@ -83,6 +101,22 @@ describe('DesktopAuthorizationView', () => {
       { subscription_id: 20 }
     )
     expect(wrapper.text()).toContain('接入成功')
+    wrapper.unmount()
+  })
+
+  it('shows localized plan names on the English authorization page', async () => {
+    localeState.value = 'en'
+    approveSession.mockResolvedValue({ data: { state: 'selection_required', subscriptions: [
+      { id: 20, group_id: 4, group_name: 'codex-standard', expires_at: '2026-09-10T00:00:00Z' },
+    ] } })
+
+    const wrapper = shallowMount(DesktopAuthorizationView, {
+      global: { stubs: { Icon: true } },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Codex Standard')
+    expect(wrapper.text()).not.toContain('codex-standard')
     wrapper.unmount()
   })
 

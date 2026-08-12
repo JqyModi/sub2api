@@ -40,14 +40,14 @@
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="font-semibold text-gray-900 dark:text-white">
-                    {{ subscription.group?.name || `Group #${subscription.group_id}` }}
+                    {{ subscriptionDisplayName(subscription) }}
                   </h3>
                   <span :class="['rounded-md border px-2 py-0.5 text-[11px] font-medium', platformBadgeClass(subscription.group?.platform || '')]">
                     {{ platformLabel(subscription.group?.platform || '') }}
                   </span>
                 </div>
-                <p v-if="subscription.group?.description" class="mt-0.5 text-xs text-gray-500 dark:text-dark-400">
-                  {{ subscription.group.description }}
+                <p v-if="subscriptionDisplayDescription(subscription)" class="mt-0.5 text-xs text-gray-500 dark:text-dark-400">
+                  {{ subscriptionDisplayDescription(subscription) }}
                 </p>
                 <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400 dark:text-gray-500">
                   <span>{{ t('payment.planCard.rate') }}: ×{{ subscription.group?.rate_multiplier ?? 1 }}</span>
@@ -253,9 +253,12 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import subscriptionsAPI from '@/api/subscriptions'
+import { paymentAPI } from '@/api/payment'
 import type { UserSubscription } from '@/types'
+import type { SubscriptionPlanCatalogItem } from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { localizedPlanContentForGroup } from '@/components/payment/localizedPlanContent'
 import { formatDateTimeToMinute } from '@/utils/format'
 import { hasPeakRate, formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
 import { platformBorderClass, platformBadgeClass, platformButtonClass, platformLabel } from '@/utils/platformColors'
@@ -276,12 +279,25 @@ function platformAccentDotClass(p: string): string {
   }
 }
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const appStore = useAppStore()
 
 const subscriptions = ref<UserSubscription[]>([])
+const planCatalog = ref<SubscriptionPlanCatalogItem[]>([])
 const loading = ref(true)
+
+function subscriptionDisplayName(subscription: UserSubscription): string {
+  return localizedPlanContentForGroup(planCatalog.value, subscription.group_id, locale.value)?.name
+    || subscription.group?.name
+    || `Group #${subscription.group_id}`
+}
+
+function subscriptionDisplayDescription(subscription: UserSubscription): string {
+  return localizedPlanContentForGroup(planCatalog.value, subscription.group_id, locale.value)?.description
+    || subscription.group?.description
+    || ''
+}
 
 function subscriptionHasPeakRate(subscription: UserSubscription): boolean {
   return hasPeakRate(subscription.group)
@@ -294,7 +310,12 @@ function subscriptionPeakRateLabel(subscription: UserSubscription): string {
 async function loadSubscriptions() {
   try {
     loading.value = true
-    subscriptions.value = await subscriptionsAPI.getMySubscriptions()
+    const [loadedSubscriptions, loadedCatalog] = await Promise.all([
+      subscriptionsAPI.getMySubscriptions(),
+      paymentAPI.getPlanCatalog().then(response => response.data).catch(() => []),
+    ])
+    subscriptions.value = loadedSubscriptions
+    planCatalog.value = loadedCatalog
   } catch (error) {
     console.error('Failed to load subscriptions:', error)
     appStore.showError(t('userSubscriptions.failedToLoad'))

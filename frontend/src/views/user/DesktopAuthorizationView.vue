@@ -42,7 +42,7 @@
               <span v-if="selectedSubscriptionId === subscription.id" class="h-2.5 w-2.5 rounded-full bg-primary-500"></span>
             </span>
             <span>
-              <strong class="block font-medium">{{ subscription.group_name }}</strong>
+              <strong class="block font-medium">{{ subscriptionDisplayName(subscription) }}</strong>
               <small class="mt-0.5 block opacity-75">{{ copy.expires }} {{ formatExpiry(subscription.expires_at) }}</small>
             </span>
           </span>
@@ -77,8 +77,11 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '@/api'
+import { paymentAPI } from '@/api/payment'
 import { useI18n } from 'vue-i18n'
 import { buildDesktopSubscriptionPurchaseRedirect } from '@/utils/authRedirect'
+import type { SubscriptionPlanCatalogItem } from '@/types/payment'
+import { localizedPlanContentForGroup } from '@/components/payment/localizedPlanContent'
 
 type AuthorizationState = 'pending' | 'payment_required' | 'selection_required' | 'authorized' | 'denied' | 'expired' | 'error'
 type AuthorizationSubscription = { id: number; group_id: number; group_name: string; expires_at: string }
@@ -91,6 +94,7 @@ const state = ref<AuthorizationState>('pending')
 const isLoading = ref(false)
 const errorMessage = ref('')
 const subscriptions = ref<AuthorizationSubscription[]>([])
+const planCatalog = ref<SubscriptionPlanCatalogItem[]>([])
 const selectedSubscriptionId = ref<number | null>(null)
 let paymentPollTimer: number | null = null
 
@@ -99,6 +103,20 @@ const copy = computed(() => locale.value.startsWith('zh') ? {
 } : {
   title: 'Connect desktop subscription', subtitle: 'Connecting this account to Codex Multi Launcher.', loading: 'Checking your account and subscription...', confirmDetail: 'Securely connecting this device. The API key will not be shown.', confirm: 'Authorize', selectPlan: 'Choose a plan for this profile', selectPlanDetail: 'Multiple active plans were found. Requests will use the selected plan limits.', expires: 'Expires', paymentRequired: 'No active subscription was found.', paymentDetail: 'Opening subscription plans. Authorization continues automatically after payment.', purchase: 'Buy a plan', retry: 'Check again', success: 'Connected', successDetail: 'Returning to Codex Multi Launcher to finish profile creation.', close: 'Close page', cancel: 'Cancel'
 })
+
+function subscriptionDisplayName(subscription: AuthorizationSubscription): string {
+  return localizedPlanContentForGroup(planCatalog.value, subscription.group_id, locale.value)?.name
+    || subscription.group_name
+}
+
+async function loadPlanCatalog(): Promise<void> {
+  if (planCatalog.value.length > 0) return
+  try {
+    planCatalog.value = (await paymentAPI.getPlanCatalog()).data
+  } catch {
+    planCatalog.value = []
+  }
+}
 
 async function approve(subscriptionId?: number | null): Promise<void> {
   if (isLoading.value) return
@@ -115,6 +133,9 @@ async function approve(subscriptionId?: number | null): Promise<void> {
     )
     state.value = data.state
     subscriptions.value = data.subscriptions || []
+    if (data.state === 'selection_required') {
+      await loadPlanCatalog()
+    }
     if (data.state === 'selection_required' && subscriptions.value.length > 0 && !subscriptions.value.some(item => item.id === selectedSubscriptionId.value)) {
       selectedSubscriptionId.value = subscriptions.value[0].id
     }

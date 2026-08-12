@@ -32,6 +32,7 @@ func RegisterPaymentRoutes(
 		authenticated.GET("/config", paymentHandler.GetPaymentConfig)
 		authenticated.GET("/checkout-info", paymentHandler.GetCheckoutInfo)
 		authenticated.GET("/plans", paymentHandler.GetPlans)
+		authenticated.GET("/plan-catalog", paymentHandler.GetPlanCatalog)
 		authenticated.GET("/limits", paymentHandler.GetLimits)
 
 		orders := authenticated.Group("/orders")

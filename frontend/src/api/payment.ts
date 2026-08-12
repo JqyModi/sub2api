@@ -11,7 +11,8 @@ import type {
   CheckoutInfoResponse,
   CreateOrderRequest,
   CreateOrderResult,
-  PaymentOrder
+  PaymentOrder,
+  SubscriptionPlanCatalogItem
 } from '@/types/payment'
 import type { BasePaginationResponse } from '@/types'
 
@@ -32,6 +33,11 @@ export const paymentAPI = {
   /** Get available subscription plans */
   getPlans() {
     return apiClient.get<SubscriptionPlan[]>('/payment/plans')
+  },
+
+  /** Get display metadata for current and historical subscription plans. */
+  getPlanCatalog() {
+    return apiClient.get<SubscriptionPlanCatalogItem[]>('/payment/plan-catalog')
   },
 
   /** Get all checkout page data in a single call */

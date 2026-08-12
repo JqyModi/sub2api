@@ -1,4 +1,4 @@
-import type { SubscriptionPlan } from '@/types/payment'
+import type { SubscriptionPlanCatalogItem } from '@/types/payment'
 
 export interface LocalizedPlanContent {
   name: string
@@ -10,7 +10,7 @@ function nonEmpty(value: string | undefined): string {
   return value?.trim() || ''
 }
 
-export function localizedPlanContent(plan: SubscriptionPlan, locale: string): LocalizedPlanContent {
+export function localizedPlanContent(plan: SubscriptionPlanCatalogItem, locale: string): LocalizedPlanContent {
   const useEnglish = !locale.toLowerCase().startsWith('zh')
   const englishFeatures = plan.features_en?.filter(feature => feature.trim()) ?? []
 
@@ -27,4 +27,13 @@ export function localizedPlanContent(plan: SubscriptionPlan, locale: string): Lo
     description: plan.description || nonEmpty(plan.description_en),
     features: plan.features.length > 0 ? plan.features : englishFeatures,
   }
+}
+
+export function localizedPlanContentForGroup(
+  plans: SubscriptionPlanCatalogItem[],
+  groupId: number,
+  locale: string
+): LocalizedPlanContent | null {
+  const plan = plans.find(candidate => candidate.group_id === groupId)
+  return plan ? localizedPlanContent(plan, locale) : null
 }

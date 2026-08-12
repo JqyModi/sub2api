@@ -22,6 +22,17 @@ type PaymentHandler struct {
 	configService  *service.PaymentConfigService
 }
 
+type planCatalogItem struct {
+	ID            int64    `json:"id"`
+	GroupID       int64    `json:"group_id"`
+	Name          string   `json:"name"`
+	NameEN        string   `json:"name_en"`
+	Description   string   `json:"description"`
+	DescriptionEN string   `json:"description_en"`
+	Features      []string `json:"features"`
+	FeaturesEN    []string `json:"features_en"`
+}
+
 // NewPaymentHandler creates a new PaymentHandler.
 func NewPaymentHandler(paymentService *service.PaymentService, configService *service.PaymentConfigService) *PaymentHandler {
 	return &PaymentHandler{
@@ -108,6 +119,36 @@ func (h *PaymentHandler) GetPlans(c *gin.Context) {
 		})
 	}
 	response.Success(c, result)
+}
+
+// GetPlanCatalog returns localized display metadata for current and historical plans.
+// Unlike the purchase list, it includes plans that are no longer for sale so existing
+// subscriptions can still show the plan the user originally purchased.
+// GET /api/v1/payment/plan-catalog
+func (h *PaymentHandler) GetPlanCatalog(c *gin.Context) {
+	plans, err := h.configService.ListPlans(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, planCatalogForResponse(plans))
+}
+
+func planCatalogForResponse(plans []*dbent.SubscriptionPlan) []planCatalogItem {
+	result := make([]planCatalogItem, 0, len(plans))
+	for _, plan := range plans {
+		result = append(result, planCatalogItem{
+			ID:            plan.ID,
+			GroupID:       plan.GroupID,
+			Name:          plan.Name,
+			NameEN:        plan.NameEn,
+			Description:   plan.Description,
+			DescriptionEN: plan.DescriptionEn,
+			Features:      parseFeatures(plan.Features),
+			FeaturesEN:    parseFeatures(plan.FeaturesEn),
+		})
+	}
+	return result
 }
 
 // GetCheckoutInfo returns all data the payment page needs in a single call:

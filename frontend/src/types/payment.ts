@@ -146,6 +146,17 @@ export interface SubscriptionPlan {
   sort_order: number
 }
 
+export interface SubscriptionPlanCatalogItem {
+  id: number
+  group_id: number
+  name: string
+  name_en?: string
+  description: string
+  description_en?: string
+  features: string[]
+  features_en?: string[]
+}
+
 export interface PaymentChannel {
   id: number
   group_id?: number

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { SubscriptionPlan } from '@/types/payment'
-import { localizedPlanContent } from '../localizedPlanContent'
+import { localizedPlanContent, localizedPlanContentForGroup } from '../localizedPlanContent'
 
 const plan: SubscriptionPlan = {
   id: 1,
@@ -44,5 +44,14 @@ describe('localizedPlanContent', () => {
       description: plan.description,
       features: plan.features,
     })
+  })
+
+  it('finds localized content by group for historical subscription display', () => {
+    expect(localizedPlanContentForGroup([{ ...plan, for_sale: false }], 10, 'en')).toEqual({
+      name: 'Codex Starter',
+      description: 'For light usage and first-time users',
+      features: ['$35 standard usage quota', 'Up to $20 per day'],
+    })
+    expect(localizedPlanContentForGroup([plan], 999, 'en')).toBeNull()
   })
 })

@@ -21,6 +21,7 @@ const showError = vi.hoisted(() => vi.fn())
 const showInfo = vi.hoisted(() => vi.fn())
 const showWarning = vi.hoisted(() => vi.fn())
 const getCheckoutInfo = vi.hoisted(() => vi.fn())
+const getPlanCatalog = vi.hoisted(() => vi.fn(() => Promise.resolve({ data: [] })))
 const bridgeInvoke = vi.hoisted(() => vi.fn())
 const deviceState = vi.hoisted(() => ({ isMobile: true }))
 
@@ -43,6 +44,7 @@ vi.mock('vue-i18n', async () => {
     ...actual,
     useI18n: () => ({
       t: (key: string) => key,
+      locale: { value: 'en' },
     }),
   }
 })
@@ -81,6 +83,7 @@ vi.mock('@/stores', () => ({
 vi.mock('@/api/payment', () => ({
   paymentAPI: {
     getCheckoutInfo,
+    getPlanCatalog,
   },
 }))
 
