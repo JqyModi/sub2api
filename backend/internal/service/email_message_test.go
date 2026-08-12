@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"io"
 	"mime"
+	"mime/multipart"
 	"mime/quotedprintable"
 	"net/mail"
 	"regexp"
@@ -49,16 +50,30 @@ func TestBuildSMTPMessageProducesStandardsCompliantMIME(t *testing.T) {
 	require.NoError(t, err)
 	require.Regexp(t, regexp.MustCompile(`^<[0-9a-f]{32}@example\.com>$`), parsed.Header.Get("Message-ID"))
 	require.Equal(t, "1.0", parsed.Header.Get("MIME-Version"))
-	require.Equal(t, "quoted-printable", parsed.Header.Get("Content-Transfer-Encoding"))
-
 	mediaType, params, err := mime.ParseMediaType(parsed.Header.Get("Content-Type"))
 	require.NoError(t, err)
-	require.Equal(t, "text/html", mediaType)
-	require.Equal(t, "UTF-8", params["charset"])
+	require.Equal(t, "multipart/alternative", mediaType)
+	require.NotEmpty(t, params["boundary"])
 
-	decodedBody, err := io.ReadAll(quotedprintable.NewReader(parsed.Body))
+	parts := multipart.NewReader(parsed.Body, params["boundary"])
+	plainPart, err := parts.NextPart()
 	require.NoError(t, err)
-	require.Equal(t, strings.ReplaceAll(body, "\n", "\r\n"), string(decodedBody))
+	plainMediaType, _, err := mime.ParseMediaType(plainPart.Header.Get("Content-Type"))
+	require.NoError(t, err)
+	require.Equal(t, "text/plain", plainMediaType)
+	plainBody, err := io.ReadAll(quotedprintable.NewReader(plainPart))
+	require.NoError(t, err)
+	require.Contains(t, string(plainBody), "验证码：123456 & ready")
+
+	htmlPart, err := parts.NextPart()
+	require.NoError(t, err)
+	htmlMediaType, htmlParams, err := mime.ParseMediaType(htmlPart.Header.Get("Content-Type"))
+	require.NoError(t, err)
+	require.Equal(t, "text/html", htmlMediaType)
+	require.Equal(t, "UTF-8", htmlParams["charset"])
+	decodedBody, err := io.ReadAll(quotedprintable.NewReader(htmlPart))
+	require.NoError(t, err)
+	require.Equal(t, strings.ReplaceAll(body, "\n", "\r\n"), strings.TrimSuffix(string(decodedBody), "\r\n"))
 }
 
 func TestBuildSMTPMessagePreventsHeaderInjection(t *testing.T) {

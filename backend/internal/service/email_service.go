@@ -365,7 +365,7 @@ func (s *EmailService) SendVerifyCode(ctx context.Context, email, siteName strin
 	}
 
 	// 构建邮件内容
-	subject := fmt.Sprintf("[%s] Email Verification Code", siteName)
+	subject := fmt.Sprintf("[%s] %s is your verification code", siteName, code)
 	body := s.buildVerifyCodeEmailBody(code, siteName)
 
 	// 发送邮件

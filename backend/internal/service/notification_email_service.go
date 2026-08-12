@@ -1157,7 +1157,7 @@ var notificationEmailEventDefinitions = map[string]NotificationEmailEventInfo{
 var notificationEmailOfficialTemplates = map[string]map[string]notificationEmailOfficialTemplate{
 	NotificationEmailEventAuthVerifyCode: {
 		notificationEmailDefaultLocale: {
-			Subject: "[{{site_name}}] Email verification code",
+			Subject: "[{{site_name}}] {{verification_code}} is your verification code",
 			HTML: notificationEmailCard("#4f46e5", "Email verification code", `
 <p>Hello {{recipient_name}},</p>
 <p>Your verification code is:</p>
@@ -1166,7 +1166,7 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
 <p>If you did not request this code, please ignore this email.</p>`),
 		},
 		notificationEmailLocaleChinese: {
-			Subject: "[{{site_name}}] 邮箱验证码",
+			Subject: "[{{site_name}}] 邮箱验证码 {{verification_code}}",
 			HTML: notificationEmailCard("#4f46e5", "邮箱验证码", `
 <p>{{recipient_name}}，您好：</p>
 <p>您的验证码是：</p>

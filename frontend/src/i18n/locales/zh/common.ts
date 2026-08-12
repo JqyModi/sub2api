@@ -254,6 +254,7 @@ export default {
     resendCode: '重新发送验证码',
     sendCodeDesc: '我们将发送验证码到',
     codeSentSuccess: '验证码已发送！请查收您的邮箱。',
+    codeDeliveryHint: '如果 1 分钟内未收到，请检查垃圾邮件，并将该邮件标记为“非垃圾邮件”。',
     verifying: '验证中...',
     verifyAndCreate: '验证并创建账户',
     resendCountdown: '{countdown}秒后可重新发送',
