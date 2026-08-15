@@ -267,6 +267,16 @@ func (s *subscriptionUserSubRepoStub) Update(_ context.Context, sub *UserSubscri
 	return nil
 }
 
+func (s *subscriptionUserSubRepoStub) Delete(_ context.Context, id int64) error {
+	sub := s.byID[id]
+	if sub == nil {
+		return ErrSubscriptionNotFound
+	}
+	delete(s.byID, id)
+	delete(s.byUserGroup, s.key(sub.UserID, sub.GroupID))
+	return nil
+}
+
 func TestAssignSubscriptionReuseWhenSemanticsMatch(t *testing.T) {
 	start := time.Now().Add(-time.Hour)
 	groupRepo := &subscriptionGroupRepoStub{

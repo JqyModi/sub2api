@@ -569,8 +569,8 @@ export default {
   },
 
   affiliate: {
-    title: 'Affiliate Rebates',
-    description: 'Invite new users and convert your rebate quota into account balance',
+    title: 'Referral Rewards',
+    description: 'Share your invite link. When a friend completes their first paid subscription, you receive a launch reward subscription automatically.',
     yourCode: 'Your Affiliate Code',
     inviteLink: 'Invite Link',
     copyCode: 'Copy Code',

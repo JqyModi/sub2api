@@ -574,8 +574,8 @@ export default {
   },
 
   affiliate: {
-    title: '邀请返利',
-    description: '邀请新用户注册，并将返利额度转入账户余额',
+    title: '邀请奖励',
+    description: '分享邀请链接；好友首笔付费订阅完成后，你会自动获得活动订阅奖励',
     yourCode: '我的邀请码',
     inviteLink: '邀请链接',
     copyCode: '复制邀请码',

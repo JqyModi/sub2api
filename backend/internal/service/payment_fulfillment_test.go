@@ -1058,5 +1058,78 @@ func TestExecuteSubscriptionFulfillmentDoesNotDuplicateWorkAfterLegacySuccessAud
 	require.Zero(t, subRepo.createCalls)
 }
 
+func TestAffiliateSubscriptionRewardIsIdempotentAndRefundRevokesIt(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	ensurePaymentAuditOrderActionUniqueIndex(t, ctx, client)
+	order := createPaymentFulfillmentSubscriptionOrder(t, ctx, client, OrderStatusPaid, time.Now())
+
+	inviterID := int64(9001)
+	affiliateRepo := &paymentFulfillmentAffiliateRepoStub{
+		inviteeSummary: &AffiliateSummary{UserID: order.UserID, AffCode: "INVITEE", InviterID: &inviterID, CreatedAt: time.Now()},
+		inviterSummary: &AffiliateSummary{UserID: inviterID, AffCode: "INVITER", CreatedAt: time.Now()},
+	}
+	groupRepo := &affiliateRewardGroupRepoStub{group: &Group{
+		ID:               9,
+		Name:             affiliateSubscriptionRewardGroupName,
+		Platform:         PlatformOpenAI,
+		Status:           payment.EntityStatusActive,
+		SubscriptionType: SubscriptionTypeSubscription,
+	}}
+	subRepo := newSubscriptionUserSubRepoStub()
+	svc := &PaymentService{
+		entClient:       client,
+		groupRepo:       groupRepo,
+		subscriptionSvc: NewSubscriptionService(groupRepo, subRepo, nil, nil, nil),
+		affiliateService: NewAffiliateService(affiliateRepo,
+			NewSettingService(&paymentFulfillmentSettingRepoStub{values: map[string]string{SettingKeyAffiliateEnabled: "true"}}, nil), nil, nil),
+	}
+
+	require.NoError(t, svc.applyAffiliateSubscriptionRewardForOrder(ctx, order))
+	require.NoError(t, svc.applyAffiliateSubscriptionRewardForOrder(ctx, order))
+	require.Equal(t, 1, subRepo.createCalls)
+
+	applied, err := client.PaymentAuditLog.Query().Where(
+		paymentauditlog.OrderIDEQ(strconv.FormatInt(order.ID, 10)),
+		paymentauditlog.ActionEQ(affiliateSubscriptionRewardAction),
+	).Only(ctx)
+	require.NoError(t, err)
+	require.Contains(t, applied.Detail, `"inviterID":9001`)
+	require.Contains(t, applied.Detail, `"groupID":9`)
+
+	require.NoError(t, svc.revokeAffiliateSubscriptionReward(ctx, order.ID))
+	require.NoError(t, svc.revokeAffiliateSubscriptionReward(ctx, order.ID))
+	require.Equal(t, 1, subRepo.createCalls)
+	_, err = subRepo.GetByUserIDAndGroupID(ctx, inviterID, 9)
+	require.ErrorIs(t, err, ErrSubscriptionNotFound)
+
+	revoked, err := client.PaymentAuditLog.Query().Where(
+		paymentauditlog.OrderIDEQ(strconv.FormatInt(order.ID, 10)),
+		paymentauditlog.ActionEQ(affiliateSubscriptionRewardRevoke),
+	).Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, revoked)
+}
+
+type affiliateRewardGroupRepoStub struct {
+	groupRepoNoop
+	group *Group
+}
+
+func (s *affiliateRewardGroupRepoStub) GetByID(_ context.Context, id int64) (*Group, error) {
+	if s.group == nil || s.group.ID != id {
+		return nil, ErrGroupNotFound
+	}
+	copy := *s.group
+	return &copy, nil
+}
+
+func (s *affiliateRewardGroupRepoStub) ListActiveByPlatform(_ context.Context, platform string) ([]Group, error) {
+	if s.group == nil || s.group.Platform != platform || !s.group.IsActive() {
+		return nil, nil
+	}
+	return []Group{*s.group}, nil
+}
+
 var _ AffiliateRepository = (*paymentFulfillmentAffiliateRepoStub)(nil)
 var _ SettingRepository = (*paymentFulfillmentSettingRepoStub)(nil)

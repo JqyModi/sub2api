@@ -108,4 +108,13 @@ WHERE key = 'auth_source_default_email_grant_on_signup';
 UPDATE settings SET value = '[{"group_id":2,"validity_days":3}]', updated_at = now()
 WHERE key = 'auth_source_default_email_subscriptions';
 
+-- Referral links must bind the inviter at registration. Keep the legacy
+-- balance rebate at zero so the advertised $20 subscription reward is the
+-- only launch referral benefit and its cost remains bounded.
+UPDATE settings SET value = 'true', updated_at = now()
+WHERE key = 'affiliate_enabled';
+
+UPDATE settings SET value = '0', updated_at = now()
+WHERE key = 'affiliate_rebate_rate';
+
 COMMIT;

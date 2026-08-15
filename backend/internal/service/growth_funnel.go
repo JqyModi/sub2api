@@ -5,10 +5,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/growthevent"
+	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
+	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 )
 
 const (
@@ -89,7 +92,7 @@ func (s *PaymentService) getGrowthFunnelStats(ctx context.Context, since time.Ti
 		{"announcement_clicked", GrowthEventAnnouncementClicked},
 		{"desktop_auth_started", GrowthEventDesktopAuthStarted},
 	}
-	stages := make([]GrowthFunnelStage, 0, 7)
+	stages := make([]GrowthFunnelStage, 0, 9)
 	for _, stage := range eventStages {
 		count, err := s.entClient.GrowthEvent.Query().Where(
 			growthevent.EventTypeEQ(stage.event),
@@ -106,6 +109,33 @@ func (s *PaymentService) getGrowthFunnelStats(ctx context.Context, since time.Ti
 		return nil, err
 	}
 	stages = append(stages, GrowthFunnelStage{Key: "registration_completed", Count: registered})
+
+	trialGroupIDs, err := s.entClient.Group.Query().
+		Where(group.NameEQ("starter-beta")).
+		Select(group.FieldID).
+		Ints(ctx)
+	if err != nil {
+		return nil, err
+	}
+	trialActivated := 0
+	if len(trialGroupIDs) > 0 {
+		trialGroupID64s := make([]int64, 0, len(trialGroupIDs))
+		for _, id := range trialGroupIDs {
+			trialGroupID64s = append(trialGroupID64s, int64(id))
+		}
+		var trialUsers []struct {
+			UserID int64 `json:"user_id"`
+		}
+		err = s.entClient.UserSubscription.Query().Where(
+			usersubscription.GroupIDIn(trialGroupID64s...),
+			usersubscription.AssignedAtGTE(since),
+		).Unique(true).Select(usersubscription.FieldUserID).Scan(ctx, &trialUsers)
+		if err != nil {
+			return nil, err
+		}
+		trialActivated = len(trialUsers)
+	}
+	stages = append(stages, GrowthFunnelStage{Key: "trial_activated", Count: trialActivated})
 
 	var checkoutUsers []struct {
 		UserID int64 `json:"user_id"`
@@ -131,6 +161,15 @@ func (s *PaymentService) getGrowthFunnelStats(ctx context.Context, since time.Ti
 		return nil, err
 	}
 	stages = append(stages, GrowthFunnelStage{Key: "payment_completed", Count: len(paidUsers)})
+
+	rewarded, err := s.entClient.PaymentAuditLog.Query().Where(
+		paymentauditlog.ActionEQ(affiliateSubscriptionRewardAction),
+		paymentauditlog.CreatedAtGTE(since),
+	).Count(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stages = append(stages, GrowthFunnelStage{Key: "referral_reward_granted", Count: rewarded})
 
 	var activeUsers []struct {
 		UserID int64 `json:"user_id"`
