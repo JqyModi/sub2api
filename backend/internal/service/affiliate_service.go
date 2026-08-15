@@ -315,6 +315,23 @@ func (s *AffiliateService) AccrueInviteRebate(ctx context.Context, inviteeUserID
 	return s.AccrueInviteRebateForOrder(ctx, inviteeUserID, baseRechargeAmount, nil)
 }
 
+// GetInviterID returns the inviter bound to a user. It is intentionally
+// read-only so payment fulfillment can attach one idempotent activity reward
+// without exposing affiliate repository details to other services.
+func (s *AffiliateService) GetInviterID(ctx context.Context, inviteeUserID int64) (int64, bool, error) {
+	if s == nil || s.repo == nil || inviteeUserID <= 0 {
+		return 0, false, nil
+	}
+	summary, err := s.repo.EnsureUserAffiliate(ctx, inviteeUserID)
+	if err != nil {
+		return 0, false, err
+	}
+	if summary == nil || summary.InviterID == nil || *summary.InviterID <= 0 || *summary.InviterID == inviteeUserID {
+		return 0, false, nil
+	}
+	return *summary.InviterID, true, nil
+}
+
 func (s *AffiliateService) AccrueInviteRebateForOrder(ctx context.Context, inviteeUserID int64, baseRechargeAmount float64, sourceOrderID *int64) (float64, error) {
 	if s == nil || s.repo == nil {
 		return 0, nil

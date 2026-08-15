@@ -504,6 +504,40 @@ func (s *PaymentService) applyRefundFinalDeduction(ctx context.Context, p *Refun
 			}
 		}
 	}
+	if err := s.revokeAffiliateSubscriptionReward(ctx, p.OrderID); err != nil {
+		return fmt.Errorf("revoke affiliate subscription reward: %w", err)
+	}
+	return nil
+}
+
+func (s *PaymentService) revokeAffiliateSubscriptionReward(ctx context.Context, orderID int64) error {
+	if s == nil || s.subscriptionSvc == nil || s.entClient == nil {
+		return nil
+	}
+	orderKey := strconv.FormatInt(orderID, 10)
+	if s.hasAuditLog(ctx, orderID, affiliateSubscriptionRewardRevoke) {
+		return nil
+	}
+	entry, err := s.entClient.PaymentAuditLog.Query().Where(
+		paymentauditlog.OrderIDEQ(orderKey),
+		paymentauditlog.ActionEQ(affiliateSubscriptionRewardAction),
+	).Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	var detail struct {
+		SubID int64 `json:"subID"`
+	}
+	if err := json.Unmarshal([]byte(entry.Detail), &detail); err != nil || detail.SubID <= 0 {
+		return nil
+	}
+	if err := s.subscriptionSvc.RevokeSubscription(ctx, detail.SubID); err != nil {
+		return err
+	}
+	s.writeAuditLog(ctx, orderID, affiliateSubscriptionRewardRevoke, "system", map[string]any{"subID": detail.SubID})
 	return nil
 }
 

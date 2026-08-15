@@ -30,6 +30,13 @@ var ErrOrderNotFound = errors.New("payment order not found")
 
 const paymentFulfillmentLeaseDuration = 5 * time.Minute
 
+const (
+	affiliateSubscriptionRewardGroupName = "codex-invite-bonus"
+	affiliateSubscriptionRewardDays     = 30
+	affiliateSubscriptionRewardAction   = "AFFILIATE_SUBSCRIPTION_REWARD_APPLIED"
+	affiliateSubscriptionRewardRevoke   = "AFFILIATE_SUBSCRIPTION_REWARD_REVOKED"
+)
+
 type paymentFulfillmentLease struct {
 	version time.Time
 }
@@ -508,7 +515,108 @@ func (s *PaymentService) doSub(ctx context.Context, o *dbent.PaymentOrder, lease
 	if err := s.applyAffiliateRebateForOrder(ctx, o); err != nil {
 		return err
 	}
+	if err := s.applyAffiliateSubscriptionRewardForOrder(ctx, o); err != nil {
+		return err
+	}
 	return s.markCompleted(ctx, o, lease, "SUBSCRIPTION_SUCCESS")
+}
+
+// applyAffiliateSubscriptionRewardForOrder grants a separate, non-sale
+// subscription so the reward remains usable by the existing desktop
+// authorization flow. It is limited to the invitee's first completed paid
+// subscription and is protected by the payment audit unique key.
+func (s *PaymentService) applyAffiliateSubscriptionRewardForOrder(ctx context.Context, o *dbent.PaymentOrder) error {
+	if s == nil || o == nil || o.OrderType != payment.OrderTypeSubscription || s.affiliateService == nil || s.subscriptionSvc == nil {
+		return nil
+	}
+	hasPriorOrder, err := s.hasPriorCompletedSubscriptionOrder(ctx, o)
+	if err != nil {
+		return fmt.Errorf("check prior subscription orders: %w", err)
+	}
+	if hasPriorOrder {
+		return nil
+	}
+	inviterID, ok, err := s.affiliateService.GetInviterID(ctx, o.UserID)
+	if err != nil || !ok {
+		return err
+	}
+	group, err := s.findAffiliateSubscriptionRewardGroup(ctx)
+	if err != nil || group == nil {
+		return err
+	}
+
+	tx, err := s.entClient.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("begin affiliate subscription reward tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	txCtx := dbent.NewTxContext(ctx, tx)
+	orderID := strconv.FormatInt(o.ID, 10)
+	exists, err := tx.PaymentAuditLog.Query().Where(
+		paymentauditlog.OrderIDEQ(orderID),
+		paymentauditlog.ActionEQ(affiliateSubscriptionRewardAction),
+	).Exist(txCtx)
+	if err != nil || exists {
+		return err
+	}
+	reward, _, err := s.subscriptionSvc.assignOrExtendSubscription(txCtx, &AssignSubscriptionInput{
+		UserID:       inviterID,
+		GroupID:      group.ID,
+		ValidityDays: affiliateSubscriptionRewardDays,
+		AssignedBy:   0,
+		Notes:        fmt.Sprintf("affiliate reward for order %s", orderID),
+	}, true)
+	if err != nil {
+		return fmt.Errorf("assign affiliate subscription reward: %w", err)
+	}
+	detail, _ := json.Marshal(map[string]any{
+		"inviterID": inviterID,
+		"inviteeID": o.UserID,
+		"groupID":   group.ID,
+		"subID":     reward.ID,
+		"days":      affiliateSubscriptionRewardDays,
+	})
+	if _, err := tx.PaymentAuditLog.Create().
+		SetOrderID(orderID).
+		SetAction(affiliateSubscriptionRewardAction).
+		SetDetail(string(detail)).
+		SetOperator("system").
+		Save(txCtx); err != nil {
+		return fmt.Errorf("record affiliate subscription reward: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit affiliate subscription reward: %w", err)
+	}
+	return s.subscriptionSvc.invalidateSubscriptionCaches(inviterID, group.ID)
+}
+
+func (s *PaymentService) hasPriorCompletedSubscriptionOrder(ctx context.Context, o *dbent.PaymentOrder) (bool, error) {
+	if s == nil || s.entClient == nil || o == nil {
+		return false, nil
+	}
+	count, err := s.entClient.PaymentOrder.Query().Where(
+		paymentorder.UserIDEQ(o.UserID),
+		paymentorder.IDNEQ(o.ID),
+		paymentorder.OrderTypeEQ(payment.OrderTypeSubscription),
+		paymentorder.StatusIn(OrderStatusPaid, OrderStatusRecharging, OrderStatusCompleted),
+	).Count(ctx)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (s *PaymentService) findAffiliateSubscriptionRewardGroup(ctx context.Context) (*Group, error) {
+	groups, err := s.groupRepo.ListActiveByPlatform(ctx, "openai")
+	if err != nil {
+		return nil, fmt.Errorf("list affiliate reward groups: %w", err)
+	}
+	for i := range groups {
+		if groups[i].Name == affiliateSubscriptionRewardGroupName && groups[i].IsSubscriptionType() {
+			return &groups[i], nil
+		}
+	}
+	return nil, nil
 }
 
 func (s *PaymentService) ensurePaymentSubscriptionAssigned(ctx context.Context, o *dbent.PaymentOrder, groupID int64, days int) error {
