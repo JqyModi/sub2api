@@ -611,6 +611,7 @@ export default {
       line1: 'Share your affiliate code or invite link with new users.',
       line2: 'When invitees recharge, you receive {rate} of the recharge as rebate quota.',
       line3: 'Transfer rebate quota to balance at any time.',
+      subscriptionBonus: 'During the activity, when a friend completes their first paid subscription, you automatically receive a separate 30-day $20 reward subscription. The related reward is revoked if that order is refunded.',
       line4: 'Newly earned rebates may have a waiting period before they can be transferred.'
     }
   },
