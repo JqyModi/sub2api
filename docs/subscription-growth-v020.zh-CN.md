@@ -45,6 +45,16 @@
 - `AFFILIATE_SUBSCRIPTION_REWARD_APPLIED`
 - `AFFILIATE_SUBSCRIPTION_REWARD_REVOKED`
 
+## 部署验证
+
+2026-08-16 已在 OCI 使用容器镜像完成部署。验证项：
+
+1. Go 后端和前端生产构建通过。
+2. `https://sub2api.minai.eu.org/health` 返回 `{"status":"ok"}`。
+3. `codex-invite-bonus` 为 active OpenAI 订阅分组，保有 5 条与 Pro 一致的上游路由。
+4. `payment_audit_logs` 存在 `(order_id, action)` 唯一索引，保障重复支付通知的奖励幂等。
+5. 邀请页面与中英文操作教程已说明活动规则；桌面 App 无需更新。
+
 ## 回滚
 
 部署前数据库备份保存在 OCI 实例：
@@ -54,5 +64,13 @@
 校验值：
 
 `7fb4fd1e91895cb4a0bc378795e7fe3ac5c7897269a11ba863b8db68f6eff5ef`
+
+邀请奖励部署前的额外备份：
+
+`/opt/sub2api/backups/activity/pre-referral-reward-20260815T182809Z.sql.gz`
+
+校验值：
+
+`389f9d91b3be8d9801f161509ddbca886b31fa1cf6e3165d9873498d7fb4294f`
 
 回滚前应停止写入并由管理员确认。不要直接删除现有用户订阅记录。
