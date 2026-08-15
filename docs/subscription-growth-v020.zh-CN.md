@@ -36,6 +36,10 @@
 奖励订阅与售卖套餐独立。现有桌面 App 已支持多个有效订阅的授权选择，因此不需要
 更新 App；邀请人可在新建 Profile 或“重新授权”时选择该奖励订阅。
 
+生产开关为 `affiliate_enabled=true`，用于在注册时绑定邀请关系并显示邀请入口；旧的
+余额返利比例固定为 `affiliate_rebate_rate=0`。因此本活动不会叠加未宣传的余额返利，
+对邀请人的权益只有上述独立订阅奖励。
+
 奖励分组初始化脚本：
 
 `scripts/activity-affiliate-reward.sql`
@@ -54,6 +58,14 @@
 3. `codex-invite-bonus` 为 active OpenAI 订阅分组，保有 5 条与 Pro 一致的上游路由。
 4. `payment_audit_logs` 存在 `(order_id, action)` 唯一索引，保障重复支付通知的奖励幂等。
 5. 邀请页面与中英文操作教程已说明活动规则；桌面 App 无需更新。
+6. 支付概览漏斗已增加“试用已发放”和“邀请奖励已发放”两项，分别从 `starter-beta`
+   订阅记录及奖励审计记录计算。
+
+关键自动测试已在 OCI 的 Go 1.26.5 容器通过：
+
+- `TestGetGrowthFunnelStatsIncludesTrialAndReferralRewardStages`
+- `TestAffiliateSubscriptionRewardIsIdempotentAndRefundRevokesIt`
+- `TestAuthService_Register_UsesEmailAuthSourceDefaultsWhenGrantEnabled`
 
 ## 回滚
 
@@ -72,5 +84,13 @@
 校验值：
 
 `389f9d91b3be8d9801f161509ddbca886b31fa1cf6e3165d9873498d7fb4294f`
+
+启用邀请关系绑定前的额外备份：
+
+`/opt/sub2api/backups/activity/pre-affiliate-enable-20260815T185600Z.sql.gz`
+
+校验值：
+
+`cbdc84f46327505e59dfe97a50159876d58ce9f33d63debc82bae2eb51ba43da`
 
 回滚前应停止写入并由管理员确认。不要直接删除现有用户订阅记录。
