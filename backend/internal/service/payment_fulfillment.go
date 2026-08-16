@@ -32,9 +32,9 @@ const paymentFulfillmentLeaseDuration = 5 * time.Minute
 
 const (
 	affiliateSubscriptionRewardGroupName = "codex-invite-bonus"
-	affiliateSubscriptionRewardDays     = 30
-	affiliateSubscriptionRewardAction   = "AFFILIATE_SUBSCRIPTION_REWARD_APPLIED"
-	affiliateSubscriptionRewardRevoke   = "AFFILIATE_SUBSCRIPTION_REWARD_REVOKED"
+	affiliateSubscriptionRewardDays      = 30
+	affiliateSubscriptionRewardAction    = "AFFILIATE_SUBSCRIPTION_REWARD_APPLIED"
+	affiliateSubscriptionRewardRevoke    = "AFFILIATE_SUBSCRIPTION_REWARD_REVOKED"
 )
 
 type paymentFulfillmentLease struct {
@@ -413,7 +413,55 @@ func (s *PaymentService) dispatchPaymentFulfillmentNotification(o *dbent.Payment
 		if err != nil {
 			slog.Warn("payment fulfillment notification email failed", "order_id", o.ID, "action", auditAction, "err", err.Error())
 		}
+		if err := s.sendAdminOrderPaidNotification(ctx, o); err != nil {
+			slog.Warn("admin paid-order notification email failed", "order_id", o.ID, "action", auditAction, "err", err.Error())
+		}
 	}()
+}
+
+func (s *PaymentService) sendAdminOrderPaidNotification(ctx context.Context, o *dbent.PaymentOrder) error {
+	if s == nil || s.notificationEmailService == nil || o == nil {
+		return nil
+	}
+	recipients := s.notificationEmailService.AdminOrderNotificationRecipients(ctx)
+	if len(recipients) == 0 {
+		slog.Warn("admin paid-order notification skipped: no verified operations recipients", "order_id", o.ID)
+		return nil
+	}
+
+	groupName := "-"
+	if o.OrderType == payment.OrderTypeSubscription && o.SubscriptionGroupID != nil && s.groupRepo != nil {
+		if group, err := s.groupRepo.GetByID(ctx, *o.SubscriptionGroupID); err == nil && group != nil && strings.TrimSpace(group.Name) != "" {
+			groupName = group.Name
+		}
+	}
+	orderType := "Balance recharge"
+	if o.OrderType == payment.OrderTypeSubscription {
+		orderType = "Subscription"
+	}
+	variables := map[string]string{
+		"order_id":           strconv.FormatInt(o.ID, 10),
+		"order_type":         orderType,
+		"order_amount":       fmt.Sprintf("%.2f", o.PayAmount),
+		"order_currency":     PaymentOrderCurrency(o),
+		"payment_method":     o.PaymentType,
+		"customer_email":     o.UserEmail,
+		"subscription_group": groupName,
+	}
+	for _, recipient := range recipients {
+		if err := s.notificationEmailService.Send(ctx, NotificationEmailSendInput{
+			Event:          NotificationEmailEventAdminOrderPaid,
+			Locale:         "zh",
+			RecipientEmail: recipient,
+			RecipientName:  emailRecipientName(recipient),
+			SourceType:     "admin_order_paid",
+			SourceID:       strconv.FormatInt(o.ID, 10),
+			Variables:      variables,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *PaymentService) sendBalanceRechargeSuccessNotification(ctx context.Context, o *dbent.PaymentOrder) error {

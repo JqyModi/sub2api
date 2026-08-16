@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/stretchr/testify/require"
 )
 
@@ -161,6 +163,30 @@ func TestNotificationEmailAdditionalEventsAreListedAndPreviewable(t *testing.T) 
 		require.NotEmpty(t, preview.Subject)
 		require.NotEmpty(t, preview.HTML)
 	}
+}
+
+func TestAdminOrderPaidNotificationUsesVerifiedQuotaRecipients(t *testing.T) {
+	ctx := context.Background()
+	repo := newNotificationEmailMemorySettingRepo()
+	require.NoError(t, repo.Set(ctx, SettingKeyAccountQuotaNotifyEmails, MarshalNotifyEmails([]NotifyEmailEntry{
+		{Email: "operator@example.com", Verified: true},
+		{Email: "disabled@example.com", Verified: true, Disabled: true},
+		{Email: "unverified@example.com", Verified: false},
+	})))
+	svc := NewNotificationEmailService(repo, nil)
+
+	require.Equal(t, []string{"operator@example.com"}, svc.AdminOrderNotificationRecipients(ctx))
+	preview, err := svc.PreviewTemplate(ctx, NotificationEmailPreviewInput{
+		Event:  NotificationEmailEventAdminOrderPaid,
+		Locale: "zh-CN",
+		Variables: map[string]string{
+			"order_id": "42", "order_amount": "57.53", "order_currency": "CNY",
+			"order_type": "Subscription", "payment_method": "wxpay", "customer_email": "user@example.com", "subscription_group": "Pro",
+		},
+	})
+	require.NoError(t, err)
+	require.Contains(t, preview.Subject, "新订单已支付 #42")
+	require.Contains(t, preview.HTML, "57.53 CNY")
 }
 
 func TestCyberPolicyNoticeTemplateWrapsLongUpstreamMessages(t *testing.T) {
@@ -457,6 +483,34 @@ func TestNotificationEmailSendDeduplicatesSubscriptionExpiryReminder(t *testing.
 	require.NoError(t, err)
 
 	require.NoError(t, svc.Send(ctx, input))
+	require.Equal(t, int64(1), smtpServer.messageCount())
+}
+
+func TestAdminOrderPaidNotificationSendsOncePerCompletedOrder(t *testing.T) {
+	ctx := context.Background()
+	repo := newNotificationEmailMemorySettingRepo()
+	smtpServer := startNotificationEmailTestSMTPServer(t)
+	require.NoError(t, repo.SetMultiple(ctx, smtpServer.settings()))
+	require.NoError(t, repo.Set(ctx, SettingKeyAccountQuotaNotifyEmails, MarshalNotifyEmails([]NotifyEmailEntry{
+		{Email: "operator@example.com", Verified: true},
+	})))
+
+	notificationService := NewNotificationEmailService(repo, NewEmailService(repo, nil))
+	paymentService := &PaymentService{notificationEmailService: notificationService}
+	order := &dbent.PaymentOrder{
+		ID:          42,
+		OrderType:   payment.OrderTypeSubscription,
+		PayAmount:   57.53,
+		PaymentType: payment.TypeWxpay,
+		UserEmail:   "customer@example.com",
+	}
+
+	require.NoError(t, paymentService.sendAdminOrderPaidNotification(ctx, order))
+	require.Equal(t, int64(1), smtpServer.messageCount())
+	require.Contains(t, smtpServer.lastMessageBody(t), "57.53 CNY")
+	require.Contains(t, smtpServer.lastMessageBody(t), "customer@example.com")
+
+	require.NoError(t, paymentService.sendAdminOrderPaidNotification(ctx, order))
 	require.Equal(t, int64(1), smtpServer.messageCount())
 }
 

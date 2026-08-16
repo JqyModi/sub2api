@@ -24,6 +24,7 @@ const (
 	NotificationEmailEventAuthPasswordReset           = "auth.password_reset"
 	NotificationEmailEventNotificationEmailVerifyCode = "notification_email.verify_code"
 	NotificationEmailEventSubscriptionPurchaseSuccess = "subscription.purchase_success"
+	NotificationEmailEventAdminOrderPaid              = "admin.order_paid"
 	NotificationEmailEventSubscriptionExpiryReminder  = "subscription.expiry_reminder"
 	NotificationEmailEventBalanceLow                  = "balance.low"
 	NotificationEmailEventBalanceRechargeSuccess      = "balance.recharge_success"
@@ -459,6 +460,20 @@ func (s *NotificationEmailService) ResolveRecipientLocale(ctx context.Context, u
 		}
 	}
 	return notificationEmailDefaultLocale
+}
+
+// AdminOrderNotificationRecipients returns the verified operations mailbox list.
+// Order receipts intentionally reuse the existing upstream-quota recipients: both
+// signals need to reach the operator who maintains upstream balance and capacity.
+func (s *NotificationEmailService) AdminOrderNotificationRecipients(ctx context.Context) []string {
+	if s == nil || s.settingRepo == nil {
+		return nil
+	}
+	raw, err := s.settingRepo.GetValue(ctx, SettingKeyAccountQuotaNotifyEmails)
+	if err != nil || strings.TrimSpace(raw) == "" || raw == "[]" {
+		return nil
+	}
+	return filterVerifiedEmails(ParseNotifyEmails(raw))
 }
 
 func (s *NotificationEmailService) IsUnsubscribed(ctx context.Context, email, event string) (bool, error) {
@@ -1025,6 +1040,7 @@ var notificationEmailEventOrder = []string{
 	NotificationEmailEventAuthPasswordReset,
 	NotificationEmailEventNotificationEmailVerifyCode,
 	NotificationEmailEventSubscriptionPurchaseSuccess,
+	NotificationEmailEventAdminOrderPaid,
 	NotificationEmailEventSubscriptionExpiryReminder,
 	NotificationEmailEventBalanceLow,
 	NotificationEmailEventBalanceRechargeSuccess,
@@ -1068,6 +1084,15 @@ var notificationEmailEventDefinitions = map[string]NotificationEmailEventInfo{
 		Category:     "subscription",
 		Optional:     false,
 		Placeholders: append(append([]string{}, notificationEmailCommonPlaceholders...), "subscription_group", "subscription_days", "expiry_time", "order_id"),
+	},
+	NotificationEmailEventAdminOrderPaid: {
+		Event:       NotificationEmailEventAdminOrderPaid,
+		Label:       "Admin order paid notification",
+		Description: "Sent to verified operations recipients after an order is fulfilled successfully.",
+		Category:    "admin",
+		Optional:    false,
+		Placeholders: append(append([]string{}, notificationEmailCommonPlaceholders...),
+			"order_id", "order_type", "order_amount", "order_currency", "payment_method", "customer_email", "subscription_group"),
 	},
 	NotificationEmailEventSubscriptionExpiryReminder: {
 		Event:        NotificationEmailEventSubscriptionExpiryReminder,
@@ -1234,6 +1259,34 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
 <p>您的 <strong>{{subscription_group}}</strong> 订阅已成功开通，有效期 <strong>{{subscription_days}}</strong> 天。</p>
 <p>到期时间：<strong>{{expiry_time}}</strong></p>
 <p>订单号：{{order_id}}</p>`),
+		},
+	},
+	NotificationEmailEventAdminOrderPaid: {
+		notificationEmailDefaultLocale: {
+			Subject: "[{{site_name}}] Paid order #{{order_id}} - {{order_amount}} {{order_currency}}",
+			HTML: notificationEmailCard("#16a34a", "Paid order", `
+<p>A customer order has been paid and fulfilled successfully.</p>
+<table style="width:100%;border-collapse:collapse;">
+  <tr><td>Order ID</td><td>{{order_id}}</td></tr>
+  <tr><td>Type</td><td>{{order_type}}</td></tr>
+  <tr><td>Amount</td><td>{{order_amount}} {{order_currency}}</td></tr>
+  <tr><td>Payment method</td><td>{{payment_method}}</td></tr>
+  <tr><td>Plan / group</td><td>{{subscription_group}}</td></tr>
+  <tr><td>Customer</td><td>{{customer_email}}</td></tr>
+</table>`),
+		},
+		notificationEmailLocaleChinese: {
+			Subject: "[{{site_name}}] 新订单已支付 #{{order_id}} - {{order_amount}} {{order_currency}}",
+			HTML: notificationEmailCard("#16a34a", "新订单已支付", `
+<p>一笔用户订单已支付并成功发放权益。</p>
+<table style="width:100%;border-collapse:collapse;">
+  <tr><td>订单号</td><td>{{order_id}}</td></tr>
+  <tr><td>订单类型</td><td>{{order_type}}</td></tr>
+  <tr><td>实付金额</td><td>{{order_amount}} {{order_currency}}</td></tr>
+  <tr><td>支付方式</td><td>{{payment_method}}</td></tr>
+  <tr><td>套餐 / 分组</td><td>{{subscription_group}}</td></tr>
+  <tr><td>用户邮箱</td><td>{{customer_email}}</td></tr>
+</table>`),
 		},
 	},
 	NotificationEmailEventSubscriptionExpiryReminder: {
