@@ -25,6 +25,7 @@ const (
 	NotificationEmailEventNotificationEmailVerifyCode = "notification_email.verify_code"
 	NotificationEmailEventSubscriptionPurchaseSuccess = "subscription.purchase_success"
 	NotificationEmailEventAdminOrderPaid              = "admin.order_paid"
+	NotificationEmailEventGrowthReactivation          = "growth.reactivation"
 	NotificationEmailEventSubscriptionExpiryReminder  = "subscription.expiry_reminder"
 	NotificationEmailEventBalanceLow                  = "balance.low"
 	NotificationEmailEventBalanceRechargeSuccess      = "balance.recharge_success"
@@ -1041,6 +1042,7 @@ var notificationEmailEventOrder = []string{
 	NotificationEmailEventNotificationEmailVerifyCode,
 	NotificationEmailEventSubscriptionPurchaseSuccess,
 	NotificationEmailEventAdminOrderPaid,
+	NotificationEmailEventGrowthReactivation,
 	NotificationEmailEventSubscriptionExpiryReminder,
 	NotificationEmailEventBalanceLow,
 	NotificationEmailEventBalanceRechargeSuccess,
@@ -1093,6 +1095,15 @@ var notificationEmailEventDefinitions = map[string]NotificationEmailEventInfo{
 		Optional:    false,
 		Placeholders: append(append([]string{}, notificationEmailCommonPlaceholders...),
 			"order_id", "order_type", "order_amount", "order_currency", "payment_method", "customer_email", "subscription_group"),
+	},
+	NotificationEmailEventGrowthReactivation: {
+		Event:       NotificationEmailEventGrowthReactivation,
+		Label:       "Growth reactivation campaign",
+		Description: "Optional campaign email sent to existing users when subscription benefits are upgraded.",
+		Category:    "growth",
+		Optional:    true,
+		Placeholders: append(append([]string{}, notificationEmailCommonPlaceholders...),
+			"activity_url", "purchase_url", "unsubscribe_url"),
 	},
 	NotificationEmailEventSubscriptionExpiryReminder: {
 		Event:        NotificationEmailEventSubscriptionExpiryReminder,
@@ -1287,6 +1298,35 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
   <tr><td>套餐 / 分组</td><td>{{subscription_group}}</td></tr>
   <tr><td>用户邮箱</td><td>{{customer_email}}</td></tr>
 </table>`),
+		},
+	},
+	NotificationEmailEventGrowthReactivation: {
+		notificationEmailDefaultLocale: {
+			Subject: "[{{site_name}}] Your subscription benefits have been upgraded",
+			HTML: notificationEmailCard("#7c3aed", "New benefits are live", `
+<p>Hello {{recipient_name}},</p>
+<p>We have improved the subscription benefits for Codex Multi Launcher users:</p>
+<ul>
+  <li>New users receive a 3-day $20 trial after email verification.</li>
+  <li>Invite a friend: when they complete their first subscription purchase, you receive a 30-day $20 reward subscription.</li>
+  <li>All subscription plans now include more usage at the same price.</li>
+</ul>
+<p><a class="button" href="{{activity_url}}">View benefits and guide</a></p>
+<p class="muted"><a href="{{purchase_url}}">Open subscription service</a> · <a href="{{unsubscribe_url}}">Unsubscribe from activity updates</a></p>`),
+		},
+		notificationEmailLocaleChinese: {
+			Subject: "[{{site_name}}] 老用户福利已升级：同价加量，邀请再送 $20",
+			HTML: notificationEmailCard("#7c3aed", "老用户福利更新", `
+<p>{{recipient_name}}，你好：</p>
+<p>订阅服务近期更新了福利，特意同步给你：</p>
+<ul>
+  <li>新用户完成邮箱验证后，可领取 3 天 $20 体验订阅。</li>
+  <li>邀请好友：好友完成首笔订阅后，你可获得 30 天 $20 奖励订阅。</li>
+  <li>全部订阅套餐已同价加量。</li>
+</ul>
+<p>你的现有账号无需重新注册；可查看活动说明、邀请好友，或直接继续使用订阅服务。</p>
+<p><a class="button" href="{{activity_url}}">查看福利与使用指引</a></p>
+<p class="muted"><a href="{{purchase_url}}">前往订阅服务</a> · <a href="{{unsubscribe_url}}">不再接收活动更新</a></p>`),
 		},
 	},
 	NotificationEmailEventSubscriptionExpiryReminder: {
