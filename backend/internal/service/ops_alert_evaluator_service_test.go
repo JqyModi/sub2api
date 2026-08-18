@@ -252,3 +252,29 @@ func TestComputeRuleMetricNewIndicators(t *testing.T) {
 		})
 	}
 }
+
+func TestOpsAlertMinimumRequestCount(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		filters map[string]any
+		want    int64
+	}{
+		{name: "missing", want: 0},
+		{name: "json number", filters: map[string]any{"minimum_request_count": float64(10)}, want: 10},
+		{name: "integer", filters: map[string]any{"minimum_request_count": 20}, want: 20},
+		{name: "string", filters: map[string]any{"minimum_request_count": "30"}, want: 30},
+		{name: "fraction is ignored", filters: map[string]any{"minimum_request_count": float64(2.5)}, want: 0},
+		{name: "zero is disabled", filters: map[string]any{"minimum_request_count": 0}, want: 0},
+		{name: "negative is disabled", filters: map[string]any{"minimum_request_count": -1}, want: 0},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, opsAlertMinimumRequestCount(tt.filters))
+		})
+	}
+}

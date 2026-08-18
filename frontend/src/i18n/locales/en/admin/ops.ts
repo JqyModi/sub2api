@@ -520,7 +520,8 @@ export default {
         hints: {
           recommended: 'Recommended: operator {operator}, threshold {threshold}{unit}',
           groupRequired: 'This is a group-level metric; selecting a group (group_id) is required.',
-          groupOptional: 'Optional: limit the rule to a specific group via group_id.'
+          groupOptional: 'Optional: limit the rule to a specific group via group_id.',
+          minimumRequestCount: 'Do not evaluate rate alerts until this many requests are present in the window. Use 0 to disable.'
         },
         table: {
           name: 'Name',
@@ -542,6 +543,7 @@ export default {
           window: 'Window (minutes)',
           sustained: 'Sustained (samples)',
           cooldown: 'Cooldown (minutes)',
+          minimumRequestCount: 'Minimum requests',
           enabled: 'Enabled',
           notifyEmail: 'Send email notifications'
         },
@@ -553,6 +555,7 @@ export default {
           groupIdRequired: 'group_id is required for group-level metrics',
           operatorRequired: 'Operator is required',
           thresholdRequired: 'Threshold must be a number',
+          minimumRequestCountRange: 'Minimum requests must not exceed 1,000,000',
           windowRange: 'Window must be one of: 1, 5, 60 minutes',
           sustainedRange: 'Sustained must be between 1 and 1440 samples',
           cooldownRange: 'Cooldown must be between 0 and 1440 minutes'

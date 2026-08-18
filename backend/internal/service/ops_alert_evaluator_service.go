@@ -432,6 +432,37 @@ func parseOpsAlertRuleScope(filters map[string]any) (platform string, groupID *i
 	return platform, groupID, region
 }
 
+func opsAlertMinimumRequestCount(filters map[string]any) int64 {
+	if filters == nil {
+		return 0
+	}
+	v, ok := filters["minimum_request_count"]
+	if !ok {
+		return 0
+	}
+
+	var count int64
+	switch value := v.(type) {
+	case float64:
+		if value >= 1 && value == math.Trunc(value) {
+			count = int64(value)
+		}
+	case int64:
+		count = value
+	case int:
+		count = int64(value)
+	case string:
+		parsed, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+		if err == nil {
+			count = parsed
+		}
+	}
+	if count < 1 {
+		return 0
+	}
+	return count
+}
+
 func (s *OpsAlertEvaluatorService) computeRuleMetric(
 	ctx context.Context,
 	rule *OpsAlertRule,
@@ -599,16 +630,25 @@ func (s *OpsAlertEvaluatorService) computeRuleMetric(
 
 	switch strings.TrimSpace(rule.MetricType) {
 	case "success_rate":
+		if overview.RequestCountSLA < opsAlertMinimumRequestCount(rule.Filters) {
+			return 0, false
+		}
 		if overview.RequestCountSLA <= 0 {
 			return 0, false
 		}
 		return overview.SLA * 100, true
 	case "error_rate":
+		if overview.RequestCountSLA < opsAlertMinimumRequestCount(rule.Filters) {
+			return 0, false
+		}
 		if overview.RequestCountSLA <= 0 {
 			return 0, false
 		}
 		return overview.ErrorRate * 100, true
 	case "upstream_error_rate":
+		if overview.RequestCountSLA < opsAlertMinimumRequestCount(rule.Filters) {
+			return 0, false
+		}
 		if overview.RequestCountSLA <= 0 {
 			return 0, false
 		}

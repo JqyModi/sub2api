@@ -66,11 +66,19 @@ const groupMetricTypes = new Set<MetricType>([
   'group_rate_limit_ratio'
 ])
 
+const requestVolumeMetricTypes = new Set<MetricType>(['success_rate', 'error_rate', 'upstream_error_rate'])
+
 function parsePositiveInt(value: unknown): number | null {
   if (value == null) return null
   if (typeof value === 'boolean') return null
   const n = typeof value === 'number' ? value : Number.parseInt(String(value), 10)
   return Number.isFinite(n) && n > 0 ? n : null
+}
+
+function parseNonNegativeInt(value: unknown): number | null {
+  if (value == null || typeof value === 'boolean') return null
+  const n = typeof value === 'number' ? value : Number.parseInt(String(value), 10)
+  return Number.isFinite(n) && n >= 0 && Math.floor(n) === n ? n : null
 }
 
 const groupOptionsBase = ref<SelectOption[]>([])
@@ -106,6 +114,29 @@ const draftGroupId = computed<number | null>({
     }
     if (!draft.value.filters) draft.value.filters = {}
     draft.value.filters.group_id = value
+  }
+})
+
+const isRequestVolumeMetricSelected = computed(() => {
+  const metricType = draft.value?.metric_type
+  return metricType ? requestVolumeMetricTypes.has(metricType) : false
+})
+
+const draftMinimumRequestCount = computed<number>({
+  get() {
+    return parseNonNegativeInt(draft.value?.filters?.minimum_request_count) ?? 0
+  },
+  set(value) {
+    if (!draft.value) return
+    const normalized = parseNonNegativeInt(value) ?? 0
+    if (normalized === 0) {
+      if (!draft.value.filters) return
+      delete draft.value.filters.minimum_request_count
+      if (Object.keys(draft.value.filters).length === 0) delete draft.value.filters
+      return
+    }
+    if (!draft.value.filters) draft.value.filters = {}
+    draft.value.filters.minimum_request_count = normalized
   }
 })
 
@@ -296,7 +327,8 @@ function newRuleDraft(): AlertRule {
     sustained_minutes: 2,
     severity: 'P1',
     cooldown_minutes: 10,
-    notify_email: true
+    notify_email: true,
+    filters: {}
   }
 }
 
@@ -332,6 +364,9 @@ const editorValidation = computed(() => {
   }
   if (!(typeof r.cooldown_minutes === 'number' && Number.isFinite(r.cooldown_minutes) && r.cooldown_minutes >= 0 && r.cooldown_minutes <= 1440)) {
     errors.push(t('admin.ops.alertRules.validation.cooldownRange'))
+  }
+  if (isRequestVolumeMetricSelected.value && draftMinimumRequestCount.value > 1000000) {
+    errors.push(t('admin.ops.alertRules.validation.minimumRequestCountRange'))
   }
   return { valid: errors.length === 0, errors }
 })
@@ -594,6 +629,12 @@ function cancelDelete() {
           <div>
             <label class="input-label">{{ t('admin.ops.alertRules.form.cooldown') }}</label>
             <input v-model.number="draft!.cooldown_minutes" class="input" type="number" min="0" max="1440" />
+          </div>
+
+          <div v-if="isRequestVolumeMetricSelected">
+            <label class="input-label">{{ t('admin.ops.alertRules.form.minimumRequestCount') }}</label>
+            <input v-model.number="draftMinimumRequestCount" class="input" type="number" min="0" max="1000000" />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.alertRules.hints.minimumRequestCount') }}</p>
           </div>
 
           <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 dark:bg-dark-800/50 md:col-span-2">
