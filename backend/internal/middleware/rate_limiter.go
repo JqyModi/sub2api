@@ -40,6 +40,19 @@ end
 return {current, repaired}
 `)
 
+var rateLimitReleaseScript = redis.NewScript(`
+local current = redis.call('GET', KEYS[1])
+if not current then
+  return 0
+end
+current = tonumber(current)
+if current <= 1 then
+  redis.call('DEL', KEYS[1])
+  return current
+end
+return redis.call('DECR', KEYS[1])
+`)
+
 // rateLimitRun 允许测试覆写脚本执行逻辑
 var rateLimitRun = func(ctx context.Context, client *redis.Client, key string, windowMillis int64) (int64, bool, error) {
 	values, err := rateLimitScript.Run(ctx, client, []string{key}, windowMillis).Slice()
@@ -106,6 +119,16 @@ func (r *RateLimiter) Allow(ctx context.Context, key string, limit int, window t
 		}
 	}
 	return result, nil
+}
+
+// Release returns a previously reserved fixed-window slot. It is intended for
+// soft guards that reserve before a handler runs and should not charge failed
+// requests against the quota. The caller owns the reservation lifecycle.
+func (r *RateLimiter) Release(ctx context.Context, key string) error {
+	if r == nil || r.redis == nil {
+		return fmt.Errorf("rate limiter is not configured")
+	}
+	return rateLimitReleaseScript.Run(ctx, r.redis, []string{r.prefix + key}).Err()
 }
 
 // clientIPForRateLimit 返回 IP 维度限流使用的客户端地址。

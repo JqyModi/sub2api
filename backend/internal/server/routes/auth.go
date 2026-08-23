@@ -260,9 +260,19 @@ func registrationGrantGuard(rateLimiter *middleware.RateLimiter) gin.HandlerFunc
 			return
 		}
 		result, err := rateLimiter.Allow(c.Request.Context(), "auth-register-grant:"+clientIP, 3, 24*time.Hour)
-		if err == nil && !result.Allowed {
+		if err != nil {
+			c.Next()
+			return
+		}
+		reservedKey := "auth-register-grant:" + clientIP
+		if !result.Allowed {
 			c.Request = c.Request.WithContext(service.WithSignupGrantSuppressed(c.Request.Context()))
 		}
 		c.Next()
+		if result.Allowed && c.Writer.Status() >= 400 {
+			if releaseErr := rateLimiter.Release(c.Request.Context(), reservedKey); releaseErr != nil {
+				c.Error(releaseErr)
+			}
+		}
 	}
 }
