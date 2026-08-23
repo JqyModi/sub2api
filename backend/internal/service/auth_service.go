@@ -38,6 +38,7 @@ var (
 	ErrRefreshTokenReused      = infraerrors.Unauthorized("REFRESH_TOKEN_REUSED", "refresh token has been reused")
 	ErrEmailVerifyRequired     = infraerrors.BadRequest("EMAIL_VERIFY_REQUIRED", "email verification is required")
 	ErrEmailSuffixNotAllowed   = infraerrors.BadRequest("EMAIL_SUFFIX_NOT_ALLOWED", "email suffix is not allowed")
+	ErrEmailSuffixBlocked      = infraerrors.BadRequest("EMAIL_SUFFIX_BLOCKED", "temporary email domains are not accepted")
 	ErrRegDisabled             = infraerrors.Forbidden("REGISTRATION_DISABLED", "registration is currently disabled")
 	ErrServiceUnavailable      = infraerrors.ServiceUnavailable("SERVICE_UNAVAILABLE", "service temporarily unavailable")
 	ErrInvitationCodeRequired  = infraerrors.BadRequest("INVITATION_CODE_REQUIRED", "invitation code is required")
@@ -206,6 +207,10 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 	}
 
 	grantPlan := s.resolveSignupGrantPlan(ctx, "email")
+	if signupGrantSuppressed(ctx) {
+		grantPlan = signupGrantPlan{Concurrency: grantPlan.Concurrency}
+		logger.LegacyPrintf("service.auth", "[Auth] Signup grant withheld by registration abuse guard: email=%s", email)
+	}
 
 	// 新用户默认 RPM（0 = 不限制）。注册时写入，后续作为用户级兜底。
 	var defaultRPMLimit int
@@ -1104,6 +1109,9 @@ func inferLegacySignupSource(email string) string {
 func (s *AuthService) validateRegistrationEmailPolicy(ctx context.Context, email string) error {
 	if s.settingService == nil {
 		return nil
+	}
+	if IsRegistrationEmailSuffixBlocked(email, s.settingService.GetRegistrationEmailSuffixBlacklist(ctx)) {
+		return ErrEmailSuffixBlocked
 	}
 	whitelist := s.settingService.GetRegistrationEmailSuffixWhitelist(ctx)
 	if !IsRegistrationEmailSuffixAllowed(email, whitelist) {

@@ -43,6 +43,30 @@ func IsRegistrationEmailSuffixAllowed(email string, whitelist []string) bool {
 	return false
 }
 
+// IsRegistrationEmailSuffixBlocked reports whether an email belongs to a
+// configured disposable/temporary-email suffix. Entries use the same syntax
+// as the whitelist: @example.com or *.example.com.
+func IsRegistrationEmailSuffixBlocked(email string, blacklist []string) bool {
+	if len(blacklist) == 0 {
+		return false
+	}
+	_, domain, ok := splitEmailForPolicy(email)
+	if !ok {
+		return false
+	}
+	suffix := "@" + domain
+	for _, blocked := range blacklist {
+		blocked = strings.ToLower(strings.TrimSpace(blocked))
+		if strings.HasPrefix(blocked, "@") && suffix == blocked {
+			return true
+		}
+		if strings.HasPrefix(blocked, "*.") && registrationEmailDomainMatchesWildcard(domain, blocked) {
+			return true
+		}
+	}
+	return false
+}
+
 // NormalizeRegistrationEmailSuffixWhitelist normalizes and validates suffix whitelist items.
 func NormalizeRegistrationEmailSuffixWhitelist(raw []string) ([]string, error) {
 	return normalizeRegistrationEmailSuffixWhitelist(raw, true)

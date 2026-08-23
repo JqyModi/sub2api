@@ -1486,6 +1486,49 @@
                 </p>
               </div>
 
+              <!-- Disposable Email Suffix Blacklist -->
+              <div class="border-t border-gray-100 pt-4 dark:border-dark-700">
+                <label class="font-medium text-gray-900 dark:text-white">{{
+                  t("admin.settings.registration.emailSuffixBlacklist")
+                }}</label>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {{ t("admin.settings.registration.emailSuffixBlacklistHint") }}
+                </p>
+                <div class="mt-3 rounded-lg border border-gray-300 bg-white p-2 dark:border-dark-500 dark:bg-dark-700">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      v-for="suffix in registrationEmailSuffixBlacklistTags"
+                      :key="suffix"
+                      class="inline-flex items-center gap-1 rounded bg-red-50 px-2 py-1 text-xs font-mono text-red-700 dark:bg-red-900/30 dark:text-red-200"
+                    >
+                      <span>{{ suffix }}</span>
+                      <button
+                        type="button"
+                        class="rounded-full text-red-500 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/50"
+                        @click="removeRegistrationEmailSuffixBlacklistTag(suffix)"
+                      >
+                        <Icon name="x" size="xs" class="h-3.5 w-3.5" :stroke-width="2" />
+                      </button>
+                    </span>
+                    <div class="flex min-w-[220px] flex-1 items-center gap-1 rounded border border-transparent px-2 py-1 focus-within:border-primary-300 dark:focus-within:border-primary-700">
+                      <input
+                        v-model="registrationEmailSuffixBlacklistDraft"
+                        type="text"
+                        class="w-full bg-transparent text-sm font-mono text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
+                        :placeholder="t('admin.settings.registration.emailSuffixBlacklistPlaceholder')"
+                        @input="handleRegistrationEmailSuffixBlacklistDraftInput"
+                        @keydown="handleRegistrationEmailSuffixBlacklistDraftKeydown"
+                        @blur="commitRegistrationEmailSuffixBlacklistDraft"
+                        @paste="handleRegistrationEmailSuffixBlacklistPaste"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t("admin.settings.registration.emailSuffixBlacklistInputHint") }}
+                </p>
+              </div>
+
               <!-- Promo Code -->
               <div
                 class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
@@ -8230,6 +8273,8 @@ const smtpPasswordManuallyEdited = ref(false);
 const testEmailAddress = ref("");
 const registrationEmailSuffixWhitelistTags = ref<string[]>([]);
 const registrationEmailSuffixWhitelistDraft = ref("");
+const registrationEmailSuffixBlacklistTags = ref<string[]>([]);
+const registrationEmailSuffixBlacklistDraft = ref("");
 const forwardedClientIpHeaderDraft = ref("");
 const tablePageSizeOptionsInput = ref("10, 20, 50, 100");
 
@@ -8803,6 +8848,7 @@ const form = reactive<SettingsForm>({
   registration_enabled: true,
   email_verify_enabled: false,
   registration_email_suffix_whitelist: [],
+  registration_email_suffix_blacklist: [],
   promo_code_enabled: true,
   invitation_code_enabled: false,
   password_reset_enabled: false,
@@ -9478,6 +9524,62 @@ function handleRegistrationEmailSuffixWhitelistPaste(event: ClipboardEvent) {
   }
 }
 
+const registrationEmailSuffixBlacklistSeparatorKeys = new Set([
+  " ", ",", "，", "Enter", "Tab",
+]);
+
+function removeRegistrationEmailSuffixBlacklistTag(suffix: string) {
+  registrationEmailSuffixBlacklistTags.value =
+    registrationEmailSuffixBlacklistTags.value.filter((item) => item !== suffix);
+}
+
+function addRegistrationEmailSuffixBlacklistTag(raw: string) {
+  const suffix = normalizeRegistrationEmailSuffixDomain(raw);
+  if (
+    !isRegistrationEmailSuffixDomainValid(suffix) ||
+    registrationEmailSuffixBlacklistTags.value.includes(suffix)
+  ) return;
+  registrationEmailSuffixBlacklistTags.value = [
+    ...registrationEmailSuffixBlacklistTags.value,
+    suffix,
+  ];
+}
+
+function commitRegistrationEmailSuffixBlacklistDraft() {
+  if (!registrationEmailSuffixBlacklistDraft.value) return;
+  addRegistrationEmailSuffixBlacklistTag(registrationEmailSuffixBlacklistDraft.value);
+  registrationEmailSuffixBlacklistDraft.value = "";
+}
+
+function handleRegistrationEmailSuffixBlacklistDraftInput() {
+  registrationEmailSuffixBlacklistDraft.value = normalizeRegistrationEmailSuffixDomain(
+    registrationEmailSuffixBlacklistDraft.value,
+  );
+}
+
+function handleRegistrationEmailSuffixBlacklistDraftKeydown(event: KeyboardEvent) {
+  if (event.isComposing) return;
+  if (registrationEmailSuffixBlacklistSeparatorKeys.has(event.key)) {
+    event.preventDefault();
+    commitRegistrationEmailSuffixBlacklistDraft();
+    return;
+  }
+  if (
+    event.key === "Backspace" &&
+    !registrationEmailSuffixBlacklistDraft.value &&
+    registrationEmailSuffixBlacklistTags.value.length > 0
+  ) registrationEmailSuffixBlacklistTags.value.pop();
+}
+
+function handleRegistrationEmailSuffixBlacklistPaste(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData("text") || "";
+  if (!text.trim()) return;
+  event.preventDefault();
+  for (const token of parseRegistrationEmailSuffixWhitelistInput(text)) {
+    addRegistrationEmailSuffixBlacklistTag(token);
+  }
+}
+
 const forwardedClientIpHeaderSeparatorKeys = new Set([
   " ",
   ",",
@@ -9997,6 +10099,10 @@ async function loadSettings() {
       normalizeRegistrationEmailSuffixDomains(
         settings.registration_email_suffix_whitelist,
       );
+    registrationEmailSuffixBlacklistTags.value =
+      normalizeRegistrationEmailSuffixDomains(
+        settings.registration_email_suffix_blacklist || [],
+      );
     form.forwarded_client_ip_headers = normalizeForwardedClientIpHeaders(
       settings.forwarded_client_ip_headers,
     );
@@ -10007,6 +10113,7 @@ async function loadSettings() {
         : [10, 20, 50, 100],
     );
     registrationEmailSuffixWhitelistDraft.value = "";
+    registrationEmailSuffixBlacklistDraft.value = "";
     form.smtp_password = "";
     smtpPasswordManuallyEdited.value = false;
     form.turnstile_secret_key = "";
@@ -10323,6 +10430,10 @@ async function saveSettings() {
       email_verify_enabled: form.email_verify_enabled,
       registration_email_suffix_whitelist:
         registrationEmailSuffixWhitelistTags.value.map((suffix) =>
+          suffix.startsWith("*.") ? suffix : `@${suffix}`,
+        ),
+      registration_email_suffix_blacklist:
+        registrationEmailSuffixBlacklistTags.value.map((suffix) =>
           suffix.startsWith("*.") ? suffix : `@${suffix}`,
         ),
       promo_code_enabled: form.promo_code_enabled,
@@ -10651,6 +10762,10 @@ async function saveSettings() {
       normalizeRegistrationEmailSuffixDomains(
         updated.registration_email_suffix_whitelist,
       );
+    registrationEmailSuffixBlacklistTags.value =
+      normalizeRegistrationEmailSuffixDomains(
+        updated.registration_email_suffix_blacklist || [],
+      );
     form.forwarded_client_ip_headers = normalizeForwardedClientIpHeaders(
       updated.forwarded_client_ip_headers,
     );
@@ -10661,6 +10776,7 @@ async function saveSettings() {
         : [10, 20, 50, 100],
     );
     registrationEmailSuffixWhitelistDraft.value = "";
+    registrationEmailSuffixBlacklistDraft.value = "";
     form.smtp_password = "";
     smtpPasswordManuallyEdited.value = false;
     form.turnstile_secret_key = "";

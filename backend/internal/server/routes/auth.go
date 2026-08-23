@@ -5,6 +5,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/handler"
 	"github.com/Wei-Shaw/sub2api/internal/middleware"
+	ippkg "github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	servermiddleware "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
@@ -34,7 +35,7 @@ func RegisterAuthRoutes(
 		// 注册/登录/2FA/验证码发送均属于高风险入口，增加服务端兜底限流（Redis 故障时 fail-close）
 		auth.POST("/register", rateLimiter.LimitWithOptions("auth-register", 5, time.Minute, middleware.RateLimitOptions{
 			FailureMode: middleware.RateLimitFailClose,
-		}), h.Auth.Register)
+		}), registrationGrantGuard(rateLimiter), h.Auth.Register)
 		auth.POST("/login", rateLimiter.LimitWithOptions("auth-login", 20, time.Minute, middleware.RateLimitOptions{
 			FailureMode: middleware.RateLimitFailClose,
 		}), h.Auth.Login)
@@ -240,5 +241,28 @@ func RegisterAuthRoutes(
 		// 撤销所有会话（需要认证）
 		authenticated.POST("/auth/revoke-all-sessions", h.Auth.RevokeAllSessions)
 		authenticated.POST("/auth/oauth/bind-token", h.Auth.PrepareOAuthBindAccessTokenCookie)
+	}
+}
+
+// registrationGrantGuard protects promotional signup grants without blocking
+// legitimate account creation. A public IP receives at most three grant
+// attempts in a rolling 24-hour window; later registrations remain usable but
+// are created without the automatic signup balance/subscription.
+func registrationGrantGuard(rateLimiter *middleware.RateLimiter) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if rateLimiter == nil {
+			c.Next()
+			return
+		}
+		clientIP := ippkg.GetSecurityClientIP(c, false)
+		if clientIP == "" {
+			c.Next()
+			return
+		}
+		result, err := rateLimiter.Allow(c.Request.Context(), "auth-register-grant:"+clientIP, 3, 24*time.Hour)
+		if err == nil && !result.Allowed {
+			c.Request = c.Request.WithContext(service.WithSignupGrantSuppressed(c.Request.Context()))
+		}
+		c.Next()
 	}
 }
