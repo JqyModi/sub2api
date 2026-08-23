@@ -261,6 +261,10 @@ func registrationGrantGuard(rateLimiter *middleware.RateLimiter) gin.HandlerFunc
 		}
 		result, err := rateLimiter.Allow(c.Request.Context(), "auth-register-grant:"+clientIP, 3, 24*time.Hour)
 		if err != nil {
+			// The account may still be created while Redis is unavailable, but the
+			// promotional grant must fail closed so a cache outage cannot open a
+			// bulk-signup credit path.
+			c.Request = c.Request.WithContext(service.WithSignupGrantSuppressed(c.Request.Context()))
 			c.Next()
 			return
 		}
