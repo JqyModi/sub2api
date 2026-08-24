@@ -125,7 +125,7 @@ export default {
         emailSuffixBlacklist: 'Disposable Email Domain Blacklist',
         emailSuffixBlacklistHint: 'Reject one-time and temporary email domains without blocking normal QQ, Outlook, or Gmail addresses.',
         emailSuffixBlacklistPlaceholder: "{'@'}mail.tm, *.tempmail.example",
-        emailSuffixBlacklistInputHint: 'Enter @domain or *.domain values, separated by commas, spaces, or Enter.',
+        emailSuffixBlacklistInputHint: "Enter {'@'}domain or *.domain values, separated by commas, spaces, or Enter.",
         promoCode: 'Promo Code',
         promoCodeHint: 'Allow users to use promo codes during registration',
         invitationCode: 'Invitation Code Registration',

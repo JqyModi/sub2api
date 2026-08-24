@@ -125,7 +125,7 @@ export default {
         emailSuffixBlacklist: '临时邮箱域名黑名单',
         emailSuffixBlacklistHint: '拒绝使用一次性、临时邮箱域名注册；不会影响 QQ、Outlook、Gmail 等常规邮箱。',
         emailSuffixBlacklistPlaceholder: "{'@'}mail.tm, *.tempmail.example",
-        emailSuffixBlacklistInputHint: '可填写 @域名 或 *.域名，多个域名用逗号、空格或回车分隔。',
+        emailSuffixBlacklistInputHint: "可填写 {'@'}域名 或 *.域名，多个域名用逗号、空格或回车分隔。",
         promoCode: '优惠码',
         promoCodeHint: '允许用户在注册时使用优惠码',
         invitationCode: '邀请码注册',
