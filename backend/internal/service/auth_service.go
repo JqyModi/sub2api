@@ -38,7 +38,7 @@ var (
 	ErrRefreshTokenReused      = infraerrors.Unauthorized("REFRESH_TOKEN_REUSED", "refresh token has been reused")
 	ErrEmailVerifyRequired     = infraerrors.BadRequest("EMAIL_VERIFY_REQUIRED", "email verification is required")
 	ErrEmailSuffixNotAllowed   = infraerrors.BadRequest("EMAIL_SUFFIX_NOT_ALLOWED", "email suffix is not allowed")
-	ErrEmailSuffixBlocked      = infraerrors.BadRequest("EMAIL_SUFFIX_BLOCKED", "temporary email domains are not accepted")
+	ErrEmailSuffixBlocked      = infraerrors.BadRequest("EMAIL_SUFFIX_BLOCKED", "multi-level or temporary email domains are not accepted")
 	ErrRegDisabled             = infraerrors.Forbidden("REGISTRATION_DISABLED", "registration is currently disabled")
 	ErrServiceUnavailable      = infraerrors.ServiceUnavailable("SERVICE_UNAVAILABLE", "service temporarily unavailable")
 	ErrInvitationCodeRequired  = infraerrors.BadRequest("INVITATION_CODE_REQUIRED", "invitation code is required")

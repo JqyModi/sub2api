@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"golang.org/x/net/publicsuffix"
 )
 
 var registrationEmailDomainPattern = regexp.MustCompile(
@@ -69,19 +67,17 @@ func IsRegistrationEmailSuffixBlocked(email string, blacklist []string) bool {
 	return false
 }
 
-// IsRegistrationEmailMultiLevelDomainBlocked rejects subdomains below the
-// registrable domain (for example, user@a.b.example.com). Public suffix rules
-// keep normal domains such as example.co.uk and school.edu.cn allowed.
+// IsRegistrationEmailMultiLevelDomainBlocked rejects domains with three or
+// more labels (for example, user@magic668.eu.org). This intentionally uses a
+// strict anti-abuse rule: disposable providers often issue addresses under
+// generated multi-level domains, and the product policy explicitly treats
+// those domains as ineligible for signup grants.
 func IsRegistrationEmailMultiLevelDomainBlocked(email string) bool {
 	_, domain, ok := splitEmailForPolicy(email)
 	if !ok {
 		return false
 	}
-	registrable, err := publicsuffix.EffectiveTLDPlusOne(domain)
-	if err != nil {
-		return false
-	}
-	return domain != registrable
+	return strings.Count(domain, ".") >= 2
 }
 
 // NormalizeRegistrationEmailSuffixWhitelist normalizes and validates suffix whitelist items.
