@@ -1307,7 +1307,7 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
 <p>Hello {{recipient_name}},</p>
 <p>We have improved the subscription benefits for Codex Multi Launcher users:</p>
 <ul>
-  <li>New users receive a 3-day $20 trial after email verification.</li>
+  <li>New users receive a 2-day trial subscription with $10 total quota after email verification.</li>
   <li>Invite a friend: when they complete their first subscription purchase, you receive a 30-day $20 reward subscription.</li>
   <li>All subscription plans now include more usage at the same price.</li>
 </ul>
@@ -1315,12 +1315,13 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
 <p class="muted"><a href="{{purchase_url}}">Open subscription service</a> · <a href="{{unsubscribe_url}}">Unsubscribe from activity updates</a></p>`),
 		},
 		notificationEmailLocaleChinese: {
-			Subject: "[{{site_name}}] 老用户福利已升级：同价加量，邀请再送 $20",
+			Subject: "[{{site_name}}] 新用户试用福利更新：2 天 $10，邀请奖励不变",
 			HTML: notificationEmailCard("#7c3aed", "老用户福利更新", `
 <p>{{recipient_name}}，你好：</p>
 <p>订阅服务近期更新了福利，特意同步给你：</p>
 <ul>
-  <li>新用户完成邮箱验证后，可领取 3 天 $20 体验订阅。</li>
+  <li>新用户完成邮箱验证后，可领取 2 天体验订阅，总额度 $10，OpenAI 每日限额 $5。</li>
+  <li>该福利仅包含订阅额度，不再额外赠送余额；同一公网 IP 24 小时内最多享受 1 次。</li>
   <li>邀请好友：好友完成首笔订阅后，你可获得 30 天 $20 奖励订阅。</li>
   <li>全部订阅套餐已同价加量。</li>
 </ul>
