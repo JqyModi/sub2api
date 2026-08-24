@@ -1110,6 +1110,9 @@ func (s *AuthService) validateRegistrationEmailPolicy(ctx context.Context, email
 	if s.settingService == nil {
 		return nil
 	}
+	if IsRegistrationEmailMultiLevelDomainBlocked(email) {
+		return ErrEmailSuffixBlocked
+	}
 	if IsRegistrationEmailSuffixBlocked(email, s.settingService.GetRegistrationEmailSuffixBlacklist(ctx)) {
 		return ErrEmailSuffixBlocked
 	}

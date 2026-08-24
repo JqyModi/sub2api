@@ -245,7 +245,7 @@ func RegisterAuthRoutes(
 }
 
 // registrationGrantGuard protects promotional signup grants without blocking
-// legitimate account creation. A public IP receives at most three grant
+// legitimate account creation. A public IP receives at most one grant
 // attempts in a rolling 24-hour window; later registrations remain usable but
 // are created without the automatic signup balance/subscription.
 func registrationGrantGuard(rateLimiter *middleware.RateLimiter) gin.HandlerFunc {
@@ -259,7 +259,7 @@ func registrationGrantGuard(rateLimiter *middleware.RateLimiter) gin.HandlerFunc
 			c.Next()
 			return
 		}
-		result, err := rateLimiter.Allow(c.Request.Context(), "auth-register-grant:"+clientIP, 3, 24*time.Hour)
+		result, err := rateLimiter.Allow(c.Request.Context(), "auth-register-grant:"+clientIP, 1, 24*time.Hour)
 		if err != nil {
 			// The account may still be created while Redis is unavailable, but the
 			// promotional grant must fail closed so a cache outage cannot open a
