@@ -14,7 +14,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const trialUsageRestrictedGroup = "starter-beta-v2"
+var trialUsageRestrictedGroups = map[string]struct{}{
+	"starter-beta-v2": {},
+	"starter-beta-v3": {},
+}
 
 var (
 	errTrialNetworkAlreadyUsed    = errors.New("trial network already used by another account")
@@ -48,7 +51,11 @@ func NewTrialUsageIPGuard(redisClient *redis.Client) *TrialUsageIPGuard {
 }
 
 func (g *TrialUsageIPGuard) IsRestrictedGroup(group *service.Group) bool {
-	return group != nil && strings.EqualFold(strings.TrimSpace(group.Name), trialUsageRestrictedGroup)
+	if group == nil {
+		return false
+	}
+	_, restricted := trialUsageRestrictedGroups[strings.ToLower(strings.TrimSpace(group.Name))]
+	return restricted
 }
 
 func (g *TrialUsageIPGuard) Claim(ctx context.Context, userID int64, clientIP string, expiresAt time.Time) error {

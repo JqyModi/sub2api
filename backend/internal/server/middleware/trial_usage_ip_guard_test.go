@@ -70,6 +70,7 @@ func TestTrialUsageIPGuardOnlyRestrictsCurrentSignupTrial(t *testing.T) {
 	guard := &TrialUsageIPGuard{}
 	require.True(t, guard.IsRestrictedGroup(&service.Group{Name: "starter-beta-v2"}))
 	require.True(t, guard.IsRestrictedGroup(&service.Group{Name: " STARTER-BETA-V2 "}))
+	require.True(t, guard.IsRestrictedGroup(&service.Group{Name: "starter-beta-v3"}))
 	require.False(t, guard.IsRestrictedGroup(&service.Group{Name: "starter-beta"}))
 	require.False(t, guard.IsRestrictedGroup(&service.Group{Name: "pro"}))
 	require.False(t, guard.IsRestrictedGroup(nil))
