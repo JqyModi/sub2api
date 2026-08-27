@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -18,8 +19,8 @@ import (
 const maxAPIKeyAuthorizationHeaderBytes = service.MaxAPIKeyCredentialBytes + 128
 
 // NewAPIKeyAuthMiddleware 创建 API Key 认证中间件
-func NewAPIKeyAuthMiddleware(apiKeyService *service.APIKeyService, subscriptionService *service.SubscriptionService, cfg *config.Config) APIKeyAuthMiddleware {
-	return APIKeyAuthMiddleware(apiKeyAuthWithSubscription(apiKeyService, subscriptionService, cfg))
+func NewAPIKeyAuthMiddleware(apiKeyService *service.APIKeyService, subscriptionService *service.SubscriptionService, trialUsageIPGuard *TrialUsageIPGuard, cfg *config.Config) APIKeyAuthMiddleware {
+	return APIKeyAuthMiddleware(apiKeyAuthWithSubscription(apiKeyService, subscriptionService, trialUsageIPGuard, cfg))
 }
 
 // apiKeyAuthWithSubscription API Key认证中间件（支持订阅验证）
@@ -31,7 +32,7 @@ func NewAPIKeyAuthMiddleware(apiKeyService *service.APIKeyService, subscriptionS
 // /v1/usage、/v1/sub2api/billing 端点与异步生图任务查询只需鉴权，不需要计费执行。
 // usage 允许过期/配额耗尽的 Key 查询自身用量，billing 用于读取当前 Key 的倍率配置，
 // 异步生图查询允许已耗尽额度的 Key 拉取自身任务结果。
-func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscriptionService *service.SubscriptionService, cfg *config.Config) gin.HandlerFunc {
+func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscriptionService *service.SubscriptionService, trialUsageIPGuard *TrialUsageIPGuard, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// ── 1. 提取 API Key ──────────────────────────────────────────
 		if rejectInvalidAuthAbuse(c, apiKeyService) {
@@ -257,6 +258,19 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 					}
 					AbortWithError(c, status, code, validateErr.Error())
 					return
+				}
+
+				if trialUsageIPGuard != nil && trialUsageIPGuard.IsRestrictedGroup(apiKey.Group) {
+					clientIP := ip.GetSecurityClientIP(c, cfg.TrustForwardedIPForAPIKeyACL())
+					if claimErr := trialUsageIPGuard.Claim(c.Request.Context(), apiKey.User.ID, clientIP, subscription.ExpiresAt); claimErr != nil {
+						if errors.Is(claimErr, errTrialNetworkAlreadyUsed) || errors.Is(claimErr, errTrialAccountNetworkChanged) {
+							slog.Warn("trial usage network claim rejected", "user_id", apiKey.User.ID, "reason", claimErr)
+						} else {
+							slog.Error("trial usage network guard failed", "user_id", apiKey.User.ID, "error", claimErr)
+						}
+						AbortWithError(c, http.StatusForbidden, "TRIAL_NETWORK_LIMIT", "当前网络的新用户试用已被领取，请使用原试用账号或购买正式套餐")
+						return
+					}
 				}
 			} else {
 				// 非订阅模式 或 订阅模式但 subscriptionService 未注入：回退到余额检查
