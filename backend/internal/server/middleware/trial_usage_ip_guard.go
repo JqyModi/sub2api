@@ -22,8 +22,8 @@ var trialUsageRestrictedGroups = map[string]struct{}{
 const trialUsageMaxNetworks = 3
 
 var (
-	errTrialNetworkAlreadyUsed   = errors.New("trial network already used by another account")
-	errTrialAccountNetworkLimit  = errors.New("trial account network change limit reached")
+	errTrialNetworkAlreadyUsed  = errors.New("trial network already used by another account")
+	errTrialAccountNetworkLimit = errors.New("trial account network change limit reached")
 )
 
 var claimTrialUsageNetworkScript = redis.NewScript(`
