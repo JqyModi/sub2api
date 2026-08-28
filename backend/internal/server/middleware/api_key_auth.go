@@ -263,12 +263,19 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 				if trialUsageIPGuard != nil && trialUsageIPGuard.IsRestrictedGroup(apiKey.Group) {
 					clientIP := ip.GetSecurityClientIP(c, cfg.TrustForwardedIPForAPIKeyACL())
 					if claimErr := trialUsageIPGuard.Claim(c.Request.Context(), apiKey.User.ID, clientIP, subscription.ExpiresAt); claimErr != nil {
-						if errors.Is(claimErr, errTrialNetworkAlreadyUsed) || errors.Is(claimErr, errTrialAccountNetworkChanged) {
+						if errors.Is(claimErr, errTrialNetworkAlreadyUsed) || errors.Is(claimErr, errTrialAccountNetworkLimit) {
 							slog.Warn("trial usage network claim rejected", "user_id", apiKey.User.ID, "reason", claimErr)
 						} else {
 							slog.Error("trial usage network guard failed", "user_id", apiKey.User.ID, "error", claimErr)
 						}
-						AbortWithError(c, http.StatusForbidden, "TRIAL_NETWORK_LIMIT", "当前网络的新用户试用已被领取，请使用原试用账号或购买正式套餐")
+						switch {
+						case errors.Is(claimErr, errTrialNetworkAlreadyUsed):
+							AbortWithError(c, http.StatusForbidden, "TRIAL_NETWORK_ALREADY_USED", "当前网络的新用户试用已被其他账号领取，请使用原试用账号或购买正式套餐")
+						case errors.Is(claimErr, errTrialAccountNetworkLimit):
+							AbortWithError(c, http.StatusForbidden, "TRIAL_NETWORK_CHANGE_LIMIT", "该试用账号的网络切换次数已达到上限，请恢复此前网络或购买正式套餐")
+						default:
+							AbortWithError(c, http.StatusForbidden, "TRIAL_NETWORK_LIMIT", "试用网络验证暂时不可用，请稍后重试")
+						}
 						return
 					}
 				}

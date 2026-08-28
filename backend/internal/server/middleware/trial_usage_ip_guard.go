@@ -19,29 +19,45 @@ var trialUsageRestrictedGroups = map[string]struct{}{
 	"starter-beta-v3": {},
 }
 
+const trialUsageMaxNetworks = 3
+
 var (
-	errTrialNetworkAlreadyUsed    = errors.New("trial network already used by another account")
-	errTrialAccountNetworkChanged = errors.New("trial account attempted to use another network")
+	errTrialNetworkAlreadyUsed   = errors.New("trial network already used by another account")
+	errTrialAccountNetworkLimit  = errors.New("trial account network change limit reached")
 )
 
 var claimTrialUsageNetworkScript = redis.NewScript(`
 local ip_owner = redis.call("GET", KEYS[1])
-local user_ip = redis.call("GET", KEYS[2])
+local legacy_user_ip = redis.call("GET", KEYS[2])
 
 if ip_owner and ip_owner ~= ARGV[1] then
   return 2
 end
-if user_ip and user_ip ~= ARGV[2] then
+
+if legacy_user_ip then
+  redis.call("SADD", KEYS[3], legacy_user_ip)
+end
+
+local already_claimed = redis.call("SISMEMBER", KEYS[3], ARGV[2])
+local claimed_count = redis.call("SCARD", KEYS[3])
+if already_claimed == 0 and claimed_count >= tonumber(ARGV[4]) then
   return 3
 end
 
 redis.call("SET", KEYS[1], ARGV[1], "PX", ARGV[3])
-redis.call("SET", KEYS[2], ARGV[2], "PX", ARGV[3])
+redis.call("SADD", KEYS[3], ARGV[2])
+redis.call("PEXPIRE", KEYS[3], ARGV[3])
+
+if not legacy_user_ip then
+  redis.call("SET", KEYS[2], ARGV[2], "PX", ARGV[3])
+else
+  redis.call("PEXPIRE", KEYS[2], ARGV[3])
+end
 return 1
 `)
 
-// TrialUsageIPGuard binds a free-trial account to its first consumption IP and
-// prevents the same IP from consuming grants issued to multiple accounts.
+// TrialUsageIPGuard limits a free-trial account to a small set of consumption
+// networks and prevents one network from consuming grants for multiple users.
 type TrialUsageIPGuard struct {
 	redis *redis.Client
 }
@@ -84,10 +100,12 @@ func (g *TrialUsageIPGuard) Claim(ctx context.Context, userID int64, clientIP st
 		[]string{
 			"trial_usage_ip:v2:" + ipHash,
 			fmt.Sprintf("trial_usage_user:v2:%d", userID),
+			fmt.Sprintf("trial_usage_user_ips:v3:%d", userID),
 		},
 		userID,
 		ipHash,
 		ttl.Milliseconds(),
+		trialUsageMaxNetworks,
 	).Int()
 	if err != nil {
 		return fmt.Errorf("claim trial usage network: %w", err)
@@ -99,7 +117,7 @@ func (g *TrialUsageIPGuard) Claim(ctx context.Context, userID int64, clientIP st
 	case 2:
 		return errTrialNetworkAlreadyUsed
 	case 3:
-		return errTrialAccountNetworkChanged
+		return errTrialAccountNetworkLimit
 	default:
 		return fmt.Errorf("claim trial usage network: unexpected result %d", result)
 	}

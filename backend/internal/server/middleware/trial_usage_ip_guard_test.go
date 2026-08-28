@@ -26,7 +26,27 @@ func TestTrialUsageIPGuardClaim(t *testing.T) {
 	require.NoError(t, guard.Claim(ctx, 101, "198.200.42.57", expiresAt))
 	require.NoError(t, guard.Claim(ctx, 101, "198.200.42.57", expiresAt))
 	require.ErrorIs(t, guard.Claim(ctx, 102, "198.200.42.57", expiresAt), errTrialNetworkAlreadyUsed)
-	require.ErrorIs(t, guard.Claim(ctx, 101, "203.0.113.9", expiresAt), errTrialAccountNetworkChanged)
+	require.NoError(t, guard.Claim(ctx, 101, "203.0.113.9", expiresAt))
+	require.NoError(t, guard.Claim(ctx, 101, "2001:db8::1", expiresAt))
+	require.ErrorIs(t, guard.Claim(ctx, 101, "192.0.2.10", expiresAt), errTrialAccountNetworkLimit)
+	require.Equal(t, int64(trialUsageMaxNetworks), redisServer.SCard("trial_usage_user_ips:v3:101"))
+}
+
+func TestTrialUsageIPGuardMigratesLegacyBinding(t *testing.T) {
+	redisServer := miniredis.RunT(t)
+	redisClient := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
+	t.Cleanup(func() { _ = redisClient.Close() })
+
+	guard := NewTrialUsageIPGuard(redisClient)
+	expiresAt := time.Now().Add(24 * time.Hour)
+	legacyIP := "198.51.100.10"
+	legacyHash := hashTrialUsageIP(legacyIP)
+	redisServer.Set("trial_usage_user:v2:401", legacyHash)
+	redisServer.Set("trial_usage_ip:v2:"+legacyHash, "401")
+
+	require.NoError(t, guard.Claim(context.Background(), 401, "203.0.113.10", expiresAt))
+	require.True(t, redisServer.SIsMember("trial_usage_user_ips:v3:401", legacyHash))
+	require.True(t, redisServer.SIsMember("trial_usage_user_ips:v3:401", hashTrialUsageIP("203.0.113.10")))
 }
 
 func TestTrialUsageIPGuardConcurrentClaimHasSingleWinner(t *testing.T) {
@@ -64,6 +84,7 @@ func TestTrialUsageIPGuardFailsClosedWhenRedisUnavailable(t *testing.T) {
 	err := guard.Claim(context.Background(), 301, "198.200.42.57", time.Now().Add(time.Hour))
 	require.Error(t, err)
 	require.NotErrorIs(t, err, errTrialNetworkAlreadyUsed)
+	require.NotErrorIs(t, err, errTrialAccountNetworkLimit)
 }
 
 func TestTrialUsageIPGuardOnlyRestrictsCurrentSignupTrial(t *testing.T) {
