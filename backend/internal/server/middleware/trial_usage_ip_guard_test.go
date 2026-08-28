@@ -29,7 +29,9 @@ func TestTrialUsageIPGuardClaim(t *testing.T) {
 	require.NoError(t, guard.Claim(ctx, 101, "203.0.113.9", expiresAt))
 	require.NoError(t, guard.Claim(ctx, 101, "2001:db8::1", expiresAt))
 	require.ErrorIs(t, guard.Claim(ctx, 101, "192.0.2.10", expiresAt), errTrialAccountNetworkLimit)
-	require.Equal(t, int64(trialUsageMaxNetworks), redisServer.SCard("trial_usage_user_ips:v3:101"))
+	claimedCount, err := redisServer.SCard("trial_usage_user_ips:v3:101")
+	require.NoError(t, err)
+	require.Equal(t, trialUsageMaxNetworks, claimedCount)
 }
 
 func TestTrialUsageIPGuardMigratesLegacyBinding(t *testing.T) {
@@ -45,8 +47,12 @@ func TestTrialUsageIPGuardMigratesLegacyBinding(t *testing.T) {
 	redisServer.Set("trial_usage_ip:v2:"+legacyHash, "401")
 
 	require.NoError(t, guard.Claim(context.Background(), 401, "203.0.113.10", expiresAt))
-	require.True(t, redisServer.SIsMember("trial_usage_user_ips:v3:401", legacyHash))
-	require.True(t, redisServer.SIsMember("trial_usage_user_ips:v3:401", hashTrialUsageIP("203.0.113.10")))
+	legacyClaimed, err := redisServer.SIsMember("trial_usage_user_ips:v3:401", legacyHash)
+	require.NoError(t, err)
+	require.True(t, legacyClaimed)
+	currentClaimed, err := redisServer.SIsMember("trial_usage_user_ips:v3:401", hashTrialUsageIP("203.0.113.10"))
+	require.NoError(t, err)
+	require.True(t, currentClaimed)
 }
 
 func TestTrialUsageIPGuardConcurrentClaimHasSingleWinner(t *testing.T) {
